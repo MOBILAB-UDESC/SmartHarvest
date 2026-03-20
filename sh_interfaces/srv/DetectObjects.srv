@@ -1,0 +1,9 @@
+# Get detections using RGB-D images
+
+sensor_msgs/Image rgb_image
+sensor_msgs/Image depth_image
+sensor_msgs/CameraInfo cam_info
+
+---
+bool success # Wheter any object was detected
+sh_interfaces/DetectedObjects detected_objects
