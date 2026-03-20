@@ -1,0 +1,7 @@
+supervision==0.27.0
+ultralytics==8.4.7
+opencv-python==4.13.0.90
+numpy==1.26.4
+catkin-pkg
+empy
+lark
