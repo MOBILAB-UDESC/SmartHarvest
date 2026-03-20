@@ -1,0 +1,70 @@
+<root BTCPP_format="4">
+
+  <BehaviorTree ID="MainTree">
+    <RetryUntilSuccessful num_attempts="5">
+      <Sequence name="MainSequence">
+
+        <!-- Try to detect objects from one of two cameras -->
+        <Fallback name="PredictionFallback">
+          <!-- camera_default_topics are defined in the yaml config -->
+          <SubTree ID="DetectionTree" name="JackalCamera"
+            topic_names="{camera_default_topics}"
+            service_name="{detection_service_name}"
+            _autoremap="true" />
+          <SubTree ID="DetectionTree"
+            topic_names="camera_1/rgb/image;camera_1/depth/image;camera_1/rgb/camera_info"
+            service_name="{detection_service_name}"
+            _autoremap="true" />
+        </Fallback>
+
+      </Sequence>
+    </RetryUntilSuccessful>
+  </BehaviorTree>
+
+  <BehaviorTree ID="DetectionTree">
+    <Sequence name="DetectionSequence">
+      <GetCameraDataAction
+        topic_names="{topic_names}"
+        rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}" />
+      <PredictAction
+        service_name="{service_name}" rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
+        objects="{objects}" />
+      <!-- <AreObjectsFoundCondition
+        objects="{objects}"
+        total_objects="{total_objects}" /> -->
+
+      <!-- Transform objects poses into a static frame -->
+      <!-- <Script code=" n_objects := total_objects " /> -->
+      <!-- <TransformPoseAction name="transform_pose_action"
+        transform_frame="base_link" objects="{poses}"
+        transformed_objects="{poses}" />
+
+      <InitMoveitAction name="init_moveit_action"
+        arm_move_group="{arm_move_group}" gripper_move_group="{gripper_move_group}" />
+      <RemoveObjectsAction name="remove_objects_action" />
+      <SetPlanningSceneAction name="set_planning_scene_action"
+        objects="{poses}" />
+
+      <OpenGripperAction name="open_gripper_action"
+        gripper_move_group="{gripper_move_group}" /> -->
+
+      <!-- <RetryUntilSuccessful name="PickLoop" num_attempts="{total_objects}">
+        <Sequence name="PickSequence">
+          <MoveToPickAction name="move_to_pick_action"
+            arm_move_group="{arm_move_group}" total_objects="{total_objects}" in_available_count="{n_objects}"
+            out_remaining_count="{n_objects}" object_ID="{object_ID}" />
+          <AttachAction name="attach_action"
+            object_ID="{object_ID}" gripper_move_group="{gripper_move_group}" />
+          <MoveToPlaceAction name="move_to_place_action"
+            arm_move_group="{arm_move_group}" />
+          <DetachAction name="detach_action"
+            object_ID="{object_ID}" gripper_move_group="{gripper_move_group}" />
+          <AreObjectsAvailableCondition name="AreObjectsAvailableCondition"
+            in_available_count="{n_objects}" />
+        </Sequence>
+      </RetryUntilSuccessful> -->
+      <!-- <Sleep msec="5000" /> -->
+    </Sequence>
+  </BehaviorTree>
+
+</root>

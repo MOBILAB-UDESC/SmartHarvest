@@ -1,0 +1,4 @@
+namespace sh_behavior_tree
+{
+  const char* BT_BUILTIN_PLUGINS = "@bt_nodes@";
+}
