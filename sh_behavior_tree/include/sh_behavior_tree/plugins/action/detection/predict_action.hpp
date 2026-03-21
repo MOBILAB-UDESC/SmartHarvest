@@ -19,7 +19,7 @@ using DetectObjectsSrv = sh_interfaces::srv::DetectObjects;
 
 /**
  * @class sh_behavior_tree::PredictAction
- * @brief BehaviorTree Action Node that synchronously acquires RGB-D data.
+ * @brief BehaviorTree Action Node that calls the detection server and gets detected objects info.
  */
 class PredictAction : public sh_bt_base_template::BTServiceNode<
   rclcpp_lifecycle::LifecycleNode, DetectObjectsSrv>

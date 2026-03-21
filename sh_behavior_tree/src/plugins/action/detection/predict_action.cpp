@@ -55,7 +55,12 @@ bool PredictAction::send_request(std::shared_ptr<DetectObjectsSrv::Request>& req
 BT::NodeStatus PredictAction::onTick(
   const std::shared_ptr<DetectObjectsSrv::Response>& response)
 {
-  (void) response;
+  if (!response->success) {
+    RCLCPP_WARN(logger_, "Might be a problem with the server.");
+    return BT::NodeStatus::FAILURE;
+  }
+
+  setOutput("objects", response->detected_objects);
   RCLCPP_INFO(logger_, "Response messages received");
   return BT::NodeStatus::SUCCESS;
 }
