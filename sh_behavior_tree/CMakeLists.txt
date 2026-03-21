@@ -29,6 +29,10 @@ add_library(get_camera_data_action SHARED src/plugins/action/detection/get_camer
 
 add_library(predict_action SHARED src/plugins/action/detection/predict_action.cpp)
 
+add_library(clear_planning_scene_action SHARED src/plugins/action/pick_and_place/clear_planning_scene_action.cpp)
+
+add_library(update_scene_from_poses_action SHARED src/plugins/action/pick_and_place/update_scene_from_poses_action.cpp)
+
 # CONDITIONS
 add_library(are_objects_found_condition SHARED src/plugins/condition/detection/are_objects_found_condition.cpp)
 
@@ -37,6 +41,8 @@ set(bt_nodes
   get_camera_data_action
   get_odometry_action
   predict_action
+  clear_planning_scene_action
+  update_scene_from_poses_action
   # CONDITIONS
   are_objects_found_condition)
 

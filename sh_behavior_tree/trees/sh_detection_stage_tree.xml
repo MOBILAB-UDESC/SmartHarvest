@@ -12,10 +12,13 @@
             service_name="{detection_service_name}"
             _autoremap="true" />
           <SubTree ID="DetectionTree"
-            topic_names="camera_1/rgb/image;camera_1/depth/image;camera_1/rgb/camera_info"
+            topic_names="arm_camera_1/rgb/image;arm_camera_1/depth/image;arm_camera_1/rgb/camera_info"
             service_name="{detection_service_name}"
             _autoremap="true" />
         </Fallback>
+
+        <ClearPlanningSceneAction service_name="clear_scene" />
+        <UpdateSceneFromPosesAction service_name="update_from_pose_scene" objects="{objects}" />
 
       </Sequence>
     </RetryUntilSuccessful>
@@ -29,9 +32,9 @@
       <PredictAction
         service_name="{service_name}" rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
         objects="{objects}" />
-      <!-- <AreObjectsFoundCondition
+      <AreObjectsFoundCondition
         objects="{objects}"
-        total_objects="{total_objects}" /> -->
+        total_objects="{total_objects}" />
 
       <!-- Transform objects poses into a static frame -->
       <!-- <Script code=" n_objects := total_objects " /> -->
