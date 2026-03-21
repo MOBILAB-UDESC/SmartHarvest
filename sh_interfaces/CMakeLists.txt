@@ -17,7 +17,8 @@ set(msg_files
 
 set(srv_files
   "srv/DetectObjects.srv"
-  "srv/SetMoveitPlanningScene.srv"
+  "srv/ClearPlanningScene.srv"
+  "srv/UpdatePlanningSceneFromPoses.srv"
   "srv/TickTree.srv")
 
 rosidl_generate_interfaces(${PROJECT_NAME}

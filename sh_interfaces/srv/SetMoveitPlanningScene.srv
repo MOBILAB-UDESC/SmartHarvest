@@ -1,6 +1,0 @@
-bool reset # If true, clear the planning scene, otherwise, add collision objects into the scene.
-
-sh_interfaces/DetectedObjects detected_objects # Only used when reset is false.
-
----
-bool status

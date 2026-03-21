@@ -1,0 +1,5 @@
+# Clear all collision object from the scene
+
+---
+bool success
+string message

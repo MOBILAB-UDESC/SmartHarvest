@@ -70,5 +70,5 @@ def generate_launch_description():
         *args,
         sh_detection_server_cpp_node,
         configure_event_handler,
-        # activate_event_handler
+        activate_event_handler
     ])

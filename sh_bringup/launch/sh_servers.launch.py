@@ -12,7 +12,10 @@ from launch.substitutions import (
     TextSubstitution
 )
 from launch.events import matches_action
-from launch_ros.actions import LifecycleNode
+from launch_ros.actions import (
+    LifecycleNode,
+    Node
+)
 from launch_ros.event_handlers import OnStateTransition
 from launch_ros.events.lifecycle import ChangeState
 from lifecycle_msgs.msg import Transition
@@ -56,6 +59,17 @@ def generate_launch_description():
         )
     )
 
+    sh_planning_scene_server = Node(
+        package='sh_moveit_planning_scene_server',
+        executable='sh_moveit_planning_scene_server',
+        output='screen',
+        namespace='',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            LaunchConfiguration('params_file')
+        ]
+    )
+
     args = [
         DeclareLaunchArgument(
             'params_file',
@@ -76,5 +90,6 @@ def generate_launch_description():
         *args,
         sh_detection_server,
         configure_event_handler,
-        activate_event_handler
+        activate_event_handler,
+        sh_planning_scene_server
     ])

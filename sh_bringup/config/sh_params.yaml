@@ -28,3 +28,13 @@ sh_detection_server:
     visualize_rgb: false
     visualize_depth: false
     publish_detections_image: true
+
+sh_planning_scene_server:
+  ros__parameters:
+    clear_scene_service_name: clear_scene
+    update_scene_service_name: update_from_pose_scene
+    ground_plane_link: base_link
+    ground_plane_dimension: [1.0, 1.0, 0.001]
+    ground_plane_position: [0.0, 0.0, -0.066]
+    target_shape: SPHERE # SPHERE (radius), BOX (x,y,z), CONE (radius, height), CYLINDER (radius, height)
+    target_dimension: [0.03]
