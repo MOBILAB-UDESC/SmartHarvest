@@ -10,20 +10,27 @@ AreObjectsFoundCondition::AreObjectsFoundCondition(
   RCLCPP_INFO(logger_, "Node created.");
 }
 
+BT::PortsList AreObjectsFoundCondition::providedPorts()
+{
+  return {
+    BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
+    BT::OutputPort<uint8_t>("total_objects", "Number of detected objects")
+  };
+}
+
 BT::NodeStatus AreObjectsFoundCondition::tick()
 {
   RCLCPP_INFO(logger_, "Checking if any object was found.");
 
-  sh_interfaces::msg::DetectedObjects obj_pose;
-  getInput("objects", obj_pose);
-  setOutput("total_objects", obj_pose.num_objects);
+  getInput("objects", detected_objects);
 
-  if (!obj_pose.num_objects) {
+  if (!detected_objects.num_objects) {
     RCLCPP_WARN(logger_, "No objects detected");
     return BT::NodeStatus::FAILURE;
   }
 
-  RCLCPP_INFO(logger_, "%d detected objects.", obj_pose.num_objects);
+  setOutput("total_objects", detected_objects.num_objects);
+  RCLCPP_INFO(logger_, "%d detected objects.", detected_objects.num_objects);
   return BT::NodeStatus::SUCCESS;
 }
 

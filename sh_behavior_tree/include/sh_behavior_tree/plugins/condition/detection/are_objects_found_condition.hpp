@@ -1,8 +1,6 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__CONDITION__DETECTION__ARE_OBJECTS_FOUND_CONDITION_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__CONDITION__DETECTION__ARE_OBJECTS_FOUND_CONDITION_HPP_
 
-#include <mutex>
-
 #include "behaviortree_cpp/condition_node.h"
 #include "rclcpp/rclcpp.hpp"
 
@@ -36,13 +34,7 @@ public:
    *
    * @return BT::PortsList List of ports with their types and descriptions.
    */
-  static BT::PortsList providedPorts()
-  {
-    return {
-      BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
-      BT::OutputPort<int>("total_objects", "Number of detected objects")
-    };
-  }
+  static BT::PortsList providedPorts();
 
 private:
   /**
@@ -53,6 +45,7 @@ private:
   BT::NodeStatus tick() override;
 
   rclcpp::Logger logger_;
+  sh_interfaces::msg::DetectedObjects detected_objects;
 };
 
 }  // namespace sh_behavior_tree
