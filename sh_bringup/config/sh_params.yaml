@@ -13,7 +13,7 @@ sh_bt_core:
       - camera_0/depth/image
       - camera_0/rgb/camera_info
     detection_service_name: get_detections
-    # bt_plugin_ids: []
+    # bt_plugin_ids: [something_action_node]
 
 sh_detection_server:
   ros__parameters:
@@ -38,3 +38,44 @@ sh_planning_scene_server:
     ground_plane_position: [0.0, 0.0, -0.066]
     target_shape: SPHERE # SPHERE (radius), BOX (x,y,z), CONE (radius, height), CYLINDER (radius, height)
     target_dimension: [0.03]
+
+sh_move_group_server:
+  ros__parameters:
+    action_names:
+      move_to_named_target: move_to_named_target
+      move_to_pose: move_to_pose
+      move_to_object: move_to_object
+    arm_planning_config:
+      move_group: arm
+      planning_pipeline: stomp # ompl
+      planner_id: STOMP # TrajOpt
+      planning_time: 5.0
+      planning_attempts: 5
+      vel_acc_scaling_factors: [0.5, 0.5]
+      override: false
+      STOMP:
+        num_timesteps: "60"
+        num_iterations: "40"
+        num_iterations_after_valid: "0"
+        num_rollouts: "30"
+        max_rollouts: "30"
+        exponentiated_cost_sensitivity: "0.5"
+        control_cost_weight: "0.1"
+        delta_t: "0.1"
+    gripper_planning_config:
+      move_group: gripper
+      planning_pipeline: stomp # ompl
+      planner_id: STOMP # TrajOpt
+      planning_time: 2.0
+      planning_attempts: 2
+      vel_acc_scaling_factors: [0.5, 0.5]
+      override: false
+      STOMP:
+        num_timesteps: "60"
+        num_iterations: "40"
+        num_iterations_after_valid: "0"
+        num_rollouts: "30"
+        max_rollouts: "30"
+        exponentiated_cost_sensitivity: "0.5"
+        control_cost_weight: "0.1"
+        delta_t: "0.1"

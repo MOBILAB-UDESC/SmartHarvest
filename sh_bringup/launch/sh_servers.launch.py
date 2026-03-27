@@ -70,6 +70,17 @@ def generate_launch_description():
         ]
     )
 
+    sh_move_group_server = Node(
+        package='sh_move_group_server',
+        executable='sh_move_group_server',
+        output='screen',
+        namespace='',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            LaunchConfiguration('params_file')
+        ]
+    )
+
     args = [
         DeclareLaunchArgument(
             'params_file',
@@ -91,5 +102,6 @@ def generate_launch_description():
         sh_detection_server,
         configure_event_handler,
         activate_event_handler,
-        sh_planning_scene_server
+        sh_planning_scene_server,
+        sh_move_group_server
     ])
