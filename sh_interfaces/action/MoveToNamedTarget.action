@@ -1,0 +1,27 @@
+# Moves group to named poses from SRDF
+# Goal
+string named_target
+string group_name         # arm or gripper
+bool attach
+bool detach
+string object_to_attach_detach
+string link_to_attach_detach
+
+---
+# Result
+uint8 OK=0
+uint8 INVALID_GOAL=1
+uint8 PLANNING_FAILED=2
+uint8 EXECUTION_FAILED=3
+
+bool success
+uint8 error_code          # 0=OK, 1=INVALID_GOAL, 2=PLANNING_FAILED, 3=EXECUTION_FAILED
+string message
+
+---
+# Feedback
+uint8 PLANNING=0
+uint8 EXECUTING=1
+
+uint8 phase              # 0=PLANNING, 1=EXECUTING
+string message

@@ -1,0 +1,15 @@
+# Moves group to a Pose
+# Goal
+geometry_msgs/Pose target_pose
+string group_name         # arm or gripper
+
+---
+# Result
+bool success
+uint8 error_code          # 0=OK, 1=INVALID_GOAL, 2=PLANNING_FAILED, 3=EXECUTION_FAILED
+string message
+
+---
+# Feedback
+uint8 phase              # 0=PLANNING, 1=EXECUTING
+string message

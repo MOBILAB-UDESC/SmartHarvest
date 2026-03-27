@@ -7,11 +7,13 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 set(msg_files
+  "msg/ErrorCodes.msg"
   "msg/SingleObjectInfo.msg"
   "msg/DetectedObjects.msg")
 
@@ -21,10 +23,16 @@ set(srv_files
   "srv/UpdatePlanningSceneFromPoses.srv"
   "srv/TickTree.srv")
 
+set(action_files
+  "action/MoveToNamedTarget.action"
+  "action/MoveToObject.action"
+  "action/MoveToPose.action")
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
   ${srv_files}
-  DEPENDENCIES builtin_interfaces sensor_msgs std_msgs
+  ${action_files}
+  DEPENDENCIES builtin_interfaces sensor_msgs std_msgs geometry_msgs
   ADD_LINTER_TESTS)
 
 if(BUILD_TESTING)
