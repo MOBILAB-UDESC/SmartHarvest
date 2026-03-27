@@ -6,6 +6,8 @@
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
 
+#include "sh_interfaces/msg/error_codes.hpp"
+
 namespace sh_bt_base_template
 {
 /**

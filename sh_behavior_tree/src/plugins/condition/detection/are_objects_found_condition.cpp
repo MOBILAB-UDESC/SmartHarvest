@@ -14,7 +14,7 @@ BT::PortsList AreObjectsFoundCondition::providedPorts()
 {
   return {
     BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
-    BT::OutputPort<uint8_t>("total_objects", "Number of detected objects")
+    BT::OutputPort<int>("total_objects", "Number of detected objects")
   };
 }
 
@@ -29,7 +29,8 @@ BT::NodeStatus AreObjectsFoundCondition::tick()
     return BT::NodeStatus::FAILURE;
   }
 
-  setOutput("total_objects", detected_objects.num_objects);
+  setOutput<int>("total_objects", detected_objects.num_objects);
+  // setOutput("total_objects", detected_objects.num_objects);
   RCLCPP_INFO(logger_, "%d detected objects.", detected_objects.num_objects);
   return BT::NodeStatus::SUCCESS;
 }

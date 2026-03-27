@@ -10,6 +10,7 @@ find_package(behaviortree_cpp REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(sh_interfaces REQUIRED)
 
 add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(
@@ -27,7 +28,7 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME})
 ament_export_include_directories(include/${PROJECT_NAME})
-ament_export_dependencies(behaviortree_cpp message_filters rclcpp rclcpp_lifecycle)
+ament_export_dependencies(behaviortree_cpp message_filters rclcpp rclcpp_lifecycle sh_interfaces)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

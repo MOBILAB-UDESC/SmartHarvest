@@ -11,6 +11,8 @@
 #include "message_filters/sync_policies/approximate_epsilon_time.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include "sh_interfaces/msg/error_codes.hpp"
+
 namespace sh_bt_base_template
 {
 /**

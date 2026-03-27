@@ -71,6 +71,7 @@ void BTExecutor::declare_parameters()
   declare_parameter("sync_timeout", rclcpp::ParameterValue(0.25));
   declare_parameter("service_response_timeout", rclcpp::ParameterValue(4.0));
   declare_parameter("wait_for_service_timeout", rclcpp::ParameterValue(1.0));
+  declare_parameter("action_response_timeout", rclcpp::ParameterValue(4.0));
   declare_parameter("wait_for_action_timeout", rclcpp::ParameterValue(0.5));
   declare_parameter("bt_plugin_ids", rclcpp::ParameterValue(std::vector<std::string>({})));
   declare_parameter("auto_mode", rclcpp::ParameterValue(false));
@@ -91,6 +92,7 @@ BT::Blackboard::Ptr BTExecutor::setup_blackboard()
   blackboard->set("wait_for_msg_timeout", get_parameter("wait_for_msg_timeout").as_double());
   blackboard->set("service_response_timeout", get_parameter("service_response_timeout").as_double());
   blackboard->set("wait_for_service_timeout", get_parameter("wait_for_service_timeout").as_double());
+  blackboard->set("action_response_timeout", get_parameter("action_response_timeout").as_double());
   blackboard->set("wait_for_action_timeout", get_parameter("wait_for_action_timeout").as_double());
   blackboard->set("camera_default_topics", get_parameter("camera_default_topics").as_string_array());
   blackboard->set("detection_service_name", get_parameter("detection_service_name").as_string());
@@ -105,7 +107,7 @@ void BTExecutor::tick_callback(
   (void) request;
   RCLCPP_INFO(logger_, "Ticking the tree.");
 
-  BT::NodeStatus tick_result = tree_.tickOnce();
+  BT::NodeStatus tick_result = tree_.tickWhileRunning();
   if (tick_result == BT::NodeStatus::SUCCESS) {
     response->success = true;
     response->message = "Task successfully completed.";
