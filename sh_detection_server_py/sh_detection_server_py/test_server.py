@@ -25,7 +25,8 @@ class TestDetectionClient(Node):
             f'Generated random depth image: {
                 depth_img.shape}, range: {
                 depth_img.min()}-{
-                depth_img.max()}')
+                depth_img.max()}'
+        )
 
         request = DetectObjects.Request()
         request.rgb_image = self.bridge.cv2_to_imgmsg(rgb_img, 'bgr8')

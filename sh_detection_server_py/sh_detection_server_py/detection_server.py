@@ -1,6 +1,5 @@
 from cv_bridge import CvBridge
 import cv2
-from geometry_msgs.msg import Pose
 import numpy as np
 import rclpy
 from rclpy.lifecycle import (
@@ -13,8 +12,7 @@ from sensor_msgs.msg import (
     Image
 )
 import supervision as sv
-from time import sleep, time
-from tf_transformations import quaternion_from_euler
+from time import sleep
 from ultralytics import YOLO
 
 from sh_detection_server_py.parameter_handler import ParameterHandler
@@ -44,6 +42,7 @@ class DetectionServer(LifecycleNode):
         self.image_publisher = None
         self.param_handler = None
         self.parameters = None
+        self.use_sim_time = self.get_parameter("use_sim_time").get_parameter_value().bool_value
 
         self.get_logger().info(f'Lifecycle {self.get_name()} created.')
 
@@ -75,7 +74,7 @@ class DetectionServer(LifecycleNode):
             self.get_logger().error('❌ Ensure the path is correct (absolute or package-relative).')
             return TransitionCallbackReturn.FAILURE
 
-        self.get_logger().info('✅ Lyfecycle Node configured.')
+        self.get_logger().info('✅ Lifecycle Node configured.')
         return TransitionCallbackReturn.SUCCESS
 
     def on_activate(self, state: LifecycleState):
@@ -99,7 +98,7 @@ class DetectionServer(LifecycleNode):
         if self.parameters.publish_detections_image:
             self.image_publisher = self.create_publisher(Image, 'detection_image', 10)
 
-        self.get_logger().info('✅ Lyfecycle Node activated - ready for calls.')
+        self.get_logger().info('✅ Lifecycle Node activated - ready for calls.')
         return TransitionCallbackReturn.SUCCESS
 
     def on_deactivate(self, state: LifecycleState):
@@ -119,7 +118,7 @@ class DetectionServer(LifecycleNode):
         if self.parameters.publish_detections_image:
             self.destroy_publisher(self.image_publisher)
 
-        self.get_logger().info('✅ Lyfecycle Node deactivated.')
+        self.get_logger().info('✅ Lifecycle Node deactivated.')
         return TransitionCallbackReturn.SUCCESS
 
     def on_cleanup(self, state: LifecycleState):
@@ -144,7 +143,7 @@ class DetectionServer(LifecycleNode):
         self.parameters = None
         self.param_handler = None
 
-        self.get_logger().info('✅ Lyfecycle Node cleaned up.')
+        self.get_logger().info('✅ Lifecycle Node cleaned up.')
         return TransitionCallbackReturn.SUCCESS
 
     def on_shutdown(self, state: LifecycleState):
@@ -159,7 +158,7 @@ class DetectionServer(LifecycleNode):
         if state.label != 'cleanup':
             self.on_cleanup(state)
 
-        self.get_logger().info('✅ Lyfecycle Node shutted down.')
+        self.get_logger().info('✅ Lifecycle Node shutted down.')
         return TransitionCallbackReturn.SUCCESS
 
     def detection_warmup(self):
@@ -167,7 +166,7 @@ class DetectionServer(LifecycleNode):
             Warm up the YOLO model with dummy images.
         """
 
-        self.get_logger().info('Initiating model warm-up...')
+        self.get_logger().info('Starting model warm-up...')
 
         warmup_image = np.random.randint(
             0, 256,
@@ -260,8 +259,6 @@ class DetectionServer(LifecycleNode):
 
         for bbox, conf, class_id in zip(
                 detections.xyxy, detections.confidence, detections.class_id):
-            # object_info.pose.position = self.get_position(
-            #     depth_image, bbox, fx, fy, cx, cy)
             object_info = SingleObjectInfo()
             [x, y, z] = self.get_position(depth_image, bbox, fx, fy, cx, cy)
             [roll, pitch, yaw] = self.get_orientation([x, y, z])
@@ -282,9 +279,6 @@ class DetectionServer(LifecycleNode):
         """
             Estimate the 3D position of an object from its bounding box and depth information.
             Reference: https://www.mdpi.com/2073-4395/13/7/1816
-
-            Returns:
-                list: [X, Y, Z] (m) in base frame coordinates
 
             @param depth_image Depth image.
             @param bbox Bounding box [x1, y1, x2, y2]
@@ -320,16 +314,35 @@ class DetectionServer(LifecycleNode):
         Y = z0 * (y_center - cy) / fy
         Z = z0 + r
 
-        return [Z, -X, -Y]
+        # Simulation and real camera frames differ, so axis mapping is adjusted here.
+        if self.use_sim_time:
+            self.get_logger().info(f'USE_SIM_TIME: {self.use_sim_time}')
+            return [Z, -X, -Y]
+        else:
+            self.get_logger().info(f'USE_SIM_TIME: {self.use_sim_time}')
+            return [X, Y, Z]
 
     def get_orientation(self, position):
+        """
+            Compute grasp orientation angles roll, pitch, yaw from object position in camera frame.
+
+            Returns:
+                list: [roll, pitch, yaw] euler angles
+
+            @param position 3D position of an object.
+        """
         x = position[0]
         y = position[1]
         z = position[2]
 
-        roll = np.arctan2(z, x)
-        yaw = np.arctan2(y, x)
-        pitch = 0.0
+        if self.use_sim_time:
+            roll = np.arctan2(z, x)
+            yaw = np.arctan2(y, x)
+            pitch = 0.0
+        else:
+            roll = np.arctan2(x, z)
+            yaw = 0.0
+            pitch = np.arctan2(-y, np.sqrt(x**2 + z**2))
 
         return [roll, pitch, yaw]
 

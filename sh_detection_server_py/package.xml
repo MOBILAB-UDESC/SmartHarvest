@@ -7,11 +7,12 @@
   <maintainer email="nilton.csv18@edu.udesc.br">nilton</maintainer>
   <license>BSD-3-Clause</license>
 
-  <depend>rclpy</depend>
-  <depend>tf2_ros</depend>
   <depend>cv_bridge</depend>
-  <depend>sensor_msgs</depend>
   <depend>OpenCV</depend>
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_ros</depend>
+
   <depend>sh_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
