@@ -31,7 +31,7 @@ namespace sh_bt_base_template
  *        sensor_msgs::msg::CameraInfo>
  */
 template <class NodeType, class... MessageTypes>
-class BTSyncSubscriptionNode : public BT::SyncActionNode
+class BTSyncSubscriptionNode : public BT::ActionNodeBase
 {
 public:
   /**
@@ -71,22 +71,59 @@ public:
   virtual BT::NodeStatus onTick(
     const std::shared_ptr<const MessageTypes>&... last_msgs) = 0;
 
-  /**
-   * @brief Controls whether the last received message set is retained after a tick.
+  /** Callback invoked by tick() when the subscriber exceeds configured response timeout.
    *
-   * @return false by default. Override to return true if needed.
+   * Implement a custom application logic here.
    */
-  virtual bool keep_last_message() const
+  virtual void on_timeout() {}
+
+  /**
+   * @brief BehaviorTree halt callback.
+   */
+  void halt() override
   {
-    return false;
+    {
+      std::lock_guard<std::mutex> lock(sub_mutex_);
+      msg_received_ = false;
+      last_msgs_ = {};
+    }
+    resetStatus();
+  }
+
+  /**
+   * @brief Creates list of BT ports
+   * @return PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedPorts()
+  {
+    return providedBasicPorts({});
   }
 
 protected:
   using SyncPolicy = message_filters::sync_policies::ApproximateEpsilonTime<MessageTypes...>;
   using Synchronizer = message_filters::Synchronizer<SyncPolicy>;
 
+  /**
+   * @brief Any subclass of BTSyncSubscriptionNode that accepts parameters must provide a
+   * providedPorts method and call providedBasicPorts in it.
+   * @param addition Additional ports to add to BT port list
+   * @return BT::PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedBasicPorts(BT::PortsList addition)
+  {
+    BT::PortsList basic = {
+      BT::InputPort<std::vector<std::string>>(
+        "topic_names", "Topics to receive synchronized msgs."),
+      BT::InputPort<double>("sync_timeout"),
+    };
+    basic.insert(addition.begin(), addition.end());
+
+    return basic;
+  }
+
   // ROS 2 members
   rclcpp::Logger logger_;
+
 private:
   /**
    * @brief Subscriber creation, synchronizer initialization and callback registration.
@@ -155,7 +192,9 @@ private:
   std::tuple<message_filters::Subscriber<MessageTypes, NodeType>...> subscribers_;
   std::unique_ptr<Synchronizer> synchronizer_;
   std::tuple<std::shared_ptr<const MessageTypes>...> last_msgs_;
+  bool msg_received_;
   std::mutex sub_mutex_;
+  std::chrono::steady_clock::time_point timeout_deadline_;
 };
 
 //----------------------------------------------------------------
@@ -166,16 +205,17 @@ template <class NodeT, class... MessageTs>
 inline BTSyncSubscriptionNode<NodeT, MessageTs...>::BTSyncSubscriptionNode(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-  BT::SyncActionNode(action_name, node_config),
+  BT::ActionNodeBase(action_name, node_config),
   logger_(rclcpp::get_logger(action_name))
 {
   RCLCPP_INFO(logger_, "Configuring synchronized subscribers.");
 
   // Blackboard/BT ports variables
   node_ = node_config.blackboard->get<typename NodeT::WeakPtr>("root_node");
-  sync_timeout_ = node_config.blackboard->get<double>("sync_timeout");
   std::vector<std::string> topic_names;
   getInput("topic_names", topic_names);
+  getInput("sync_timeout", sync_timeout_);
+  msg_received_ = false;
 
   // Compile-time checker
   static_assert(sizeof...(MessageTs) >= 2 && sizeof...(MessageTs) <= 9,
@@ -201,6 +241,9 @@ inline void BTSyncSubscriptionNode<NodeT, MessageTs...>::create_subscribers(
   const std::vector<std::string>& topic_names,
   std::index_sequence<Is...>)
 {
+  if (node_.expired()) {
+    throw std::invalid_argument("Node pointer is empty.");
+  }
   auto node = node_.lock();
 
   // Subscribers configuration
@@ -245,29 +288,38 @@ inline void BTSyncSubscriptionNode<NodeT, MessageTs...>::msg_callback(
   const std::shared_ptr<const MessageTs>&... msgs)
 {
   std::lock_guard<std::mutex> lock(sub_mutex_);
+  msg_received_ = true;
   last_msgs_ = std::make_tuple(msgs...);
 }
 
 template <class NodeT, class... MessageTs>
 inline BT::NodeStatus BTSyncSubscriptionNode<NodeT, MessageTs...>::tick()
 {
-  auto start = std::chrono::steady_clock::now();
-  auto timeout = std::chrono::duration<double>(sync_timeout_);
-  std::tuple<std::shared_ptr<const MessageTs>...> msgs_copy;
+  if (!BT::isStatusActive(status())) {
+    timeout_deadline_ =
+    std::chrono::steady_clock::now() +
+    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+      std::chrono::duration<double>(sync_timeout_));
+    setStatus(BT::NodeStatus::RUNNING);
+  }
 
-  while (true) {
-    executor_.spin_some();
-    {
-      std::lock_guard<std::mutex> lock(sub_mutex_);
-      msgs_copy = last_msgs_;
+  executor_.spin_some();
+
+  if (std::chrono::steady_clock::now() > timeout_deadline_) {
+    on_timeout();
+    RCLCPP_ERROR(logger_, "No message received in %.3f seconds.", sync_timeout_);
+    return BT::NodeStatus::FAILURE;
+  }
+
+  std::tuple<std::shared_ptr<const MessageTs>...> msgs_copy;
+  {
+    std::lock_guard<std::mutex> lock(sub_mutex_);
+    if (!msg_received_) {
+      return BT::NodeStatus::RUNNING;
     }
-    if (std::get<0>(msgs_copy) != nullptr) {
-      break;
-    }
-    if (std::chrono::steady_clock::now() - start >= timeout) {
-      RCLCPP_INFO(logger_, "No msg arrived in %.3f seconds.", timeout.count());
-      return BT::NodeStatus::FAILURE;
-    }
+    msgs_copy = last_msgs_;
+    last_msgs_ = {};
+    msg_received_ = false;
   }
 
   auto status = std::apply(
@@ -275,11 +327,6 @@ inline BT::NodeStatus BTSyncSubscriptionNode<NodeT, MessageTs...>::tick()
       return onTick(msgs...);
     },
     msgs_copy);
-
-  if (!keep_last_message()) {
-    std::lock_guard<std::mutex> lock(sub_mutex_);
-    last_msgs_ = {};
-  }
 
   return status;
 }
