@@ -1,11 +1,7 @@
-#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_POSE_ACTION_HPP_
-#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_POSE_ACTION_HPP_
-
-#include <chrono>
-#include <mutex>
+#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_OBJECT_POSE_HPP_
+#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_OBJECT_POSE_HPP_
 
 #include "behaviortree_cpp/action_node.h"
-#include "geometry_msgs/msg/point_stamped.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
@@ -19,24 +15,24 @@ namespace sh_behavior_tree
 {
 
 /**
- * @class sh_behavior_tree::TransformPoseAction
+ * @class sh_behavior_tree::TransformObjectPose
  * @brief BehaviorTree Action Node that transforms object poses into a specified target frame.
  */
-class TransformPoseAction : public BT::SyncActionNode
+class TransformObjectPose : public BT::SyncActionNode
 {
 public:
   /**
-   * @brief A constructor for sh_behavior_tree::TransformPoseAction class.
+   * @brief A constructor for sh_behavior_tree::TransformObjectPose class.
    *
    * @param action_name Name of the action node in the BehaviorTree
    * @param config Configuration of the BehaviorTree Node
    */
-  explicit TransformPoseAction(const std::string& action_name, const BT::NodeConfig& config);
+  explicit TransformObjectPose(const std::string& action_name, const BT::NodeConfig& config);
 
   /**
-   * @brief A destructor for sh_behavior_tree::TransformPoseAction class.
+   * @brief A destructor for sh_behavior_tree::TransformObjectPose class.
    */
-  ~TransformPoseAction() = default;
+  ~TransformObjectPose() = default;
 
   /**
    * @brief Creates list of BT ports.
@@ -46,8 +42,8 @@ public:
   static BT::PortsList providedPorts()
   {
     return{
-      BT::InputPort<std::string>("transform_frame", "Frame to transform detected object poses into"),
       BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
+      BT::InputPort<std::string>("transform_frame", "Frame to transform detected object poses into"),
       BT::OutputPort<sh_interfaces::msg::DetectedObjects>(
         "transformed_objects", "List of detected objects with poses transformed into a target frame")
     };
@@ -66,7 +62,9 @@ private:
    *
    * @return true or false.
    */
-  bool transform_pose();
+  bool transform_pose(
+    const sh_interfaces::msg::DetectedObjects& objects,
+    const std::string& transform_frame);
 
   // ROS 2 node
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
@@ -76,13 +74,10 @@ private:
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  // List of detected objects
-  sh_interfaces::msg::DetectedObjects objects_;
-
   // Port variables
-  std::vector<double> camera_to_end_effector_transform_;
+  double transformation_timeout_;
 };
 
 }  // namespace sh_behavior_tree
 
-#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_POSE_ACTION_HPP_
+#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_OBJECT_POSE_HPP_
