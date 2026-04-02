@@ -1,31 +1,36 @@
-#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__GET_CURRENT_OBJECT_ACTION_HPP_
-#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__GET_CURRENT_OBJECT_ACTION_HPP_
+#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CHECK_ERROR_IDS_HPP_
+#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CHECK_ERROR_IDS_HPP_
+
+#include <chrono>
+#include <mutex>
 
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
+
+#include "sh_interfaces/msg/error_codes.hpp"
 
 namespace sh_behavior_tree
 {
 
 /**
- * @class sh_behavior_tree::GetCurrentObjectAction
+ * @class sh_behavior_tree::CheckErrorIds
  * @brief BehaviorTree Action Node that transforms object poses into a specified target frame.
  */
-class GetCurrentObjectAction : public BT::SyncActionNode
+class CheckErrorIds : public BT::SyncActionNode
 {
 public:
   /**
-   * @brief A constructor for sh_behavior_tree::GetCurrentObjectAction class.
+   * @brief A constructor for sh_behavior_tree::CheckErrorIds class.
    *
    * @param action_name Name of the action node in the BehaviorTree
    * @param config Configuration of the BehaviorTree Node
    */
-  explicit GetCurrentObjectAction(const std::string& action_name, const BT::NodeConfig& config);
+  explicit CheckErrorIds(const std::string& action_name, const BT::NodeConfig& config);
 
   /**
-   * @brief A destructor for sh_behavior_tree::GetCurrentObjectAction class.
+   * @brief A destructor for sh_behavior_tree::CheckErrorIds class.
    */
-  ~GetCurrentObjectAction() = default;
+  ~CheckErrorIds() = default;
 
   /**
    * @brief Creates list of BT ports.
@@ -48,4 +53,4 @@ private:
 
 }  // namespace sh_behavior_tree
 
-#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__GET_CURRENT_OBJECT_ACTION_HPP_
+#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CHECK_ERROR_IDS_HPP_

@@ -1,16 +1,16 @@
-#include "sh_behavior_tree/plugins/action/pick_and_place/error_checker_action.hpp"
+#include "sh_behavior_tree/plugins/action/pick_and_place/check_error_ids.hpp"
 
 namespace sh_behavior_tree
 {
 
-ErrorCheckerAction::ErrorCheckerAction(
+CheckErrorIds::CheckErrorIds(
   const std::string& action_name, const BT::NodeConfig& config):
   BT::SyncActionNode(action_name, config), logger_(rclcpp::get_logger(action_name))
 {
   RCLCPP_INFO(logger_, "Node created.");
 }
 
-BT::PortsList ErrorCheckerAction::providedPorts()
+BT::PortsList CheckErrorIds::providedPorts()
 {
   return{
     BT::InputPort<int>("error_id", "Error ID."),
@@ -21,7 +21,7 @@ BT::PortsList ErrorCheckerAction::providedPorts()
   };
 }
 
-BT::NodeStatus ErrorCheckerAction::tick()
+BT::NodeStatus CheckErrorIds::tick()
 {
   int in_current_count, total_objects, collected_object;
   int error_id;
@@ -35,62 +35,68 @@ BT::NodeStatus ErrorCheckerAction::tick()
   {
     case ErrorCodes::SUCCESS:
       ++collected_object;
-      if (in_current_count > total_objects) {
+      ++in_current_count;
+      if (in_current_count >= total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_INFO(logger_, "There is %d objects available to pick", total_objects-in_current_count);
       return BT::NodeStatus::FAILURE;
 
     case ErrorCodes::TIMEOUT:
+      ++in_current_count;
       if (in_current_count > total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_ERROR(logger_, "Response have not arrived in time.");
       return BT::NodeStatus::FAILURE;
 
     case ErrorCodes::GOAL_CANCELED:
+      ++in_current_count;
       if (in_current_count > total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_ERROR(logger_, "Action goal canceled.");
       return BT::NodeStatus::FAILURE;
 
     case ErrorCodes::GOAL_REJECTED:
+      ++in_current_count;
       if (in_current_count > total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_ERROR(logger_, "Action goal rejected.");
       return BT::NodeStatus::FAILURE;
 
     case ErrorCodes::PLANNING_FAILED:
+      ++in_current_count;
       if (in_current_count > total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_ERROR(logger_, "Planning failed.");
       return BT::NodeStatus::FAILURE;
 
     case ErrorCodes::EXECUTION_FAILED:
+      ++in_current_count;
       if (in_current_count > total_objects) {
         setOutput("collected_object", collected_object);
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
-      setOutput("out_next_count", in_current_count+1);
+      setOutput("out_next_count", in_current_count);
       RCLCPP_ERROR(logger_, "Execution failed.");
       return BT::NodeStatus::FAILURE;
   }
@@ -106,9 +112,9 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<sh_behavior_tree::ErrorCheckerAction>(name, config);
+      return std::make_unique<sh_behavior_tree::CheckErrorIds>(name, config);
     };
 
-  factory.registerBuilder<sh_behavior_tree::ErrorCheckerAction>(
-    "ErrorCheckerAction", builder);
+  factory.registerBuilder<sh_behavior_tree::CheckErrorIds>(
+    "CheckErrorIds", builder);
 }
