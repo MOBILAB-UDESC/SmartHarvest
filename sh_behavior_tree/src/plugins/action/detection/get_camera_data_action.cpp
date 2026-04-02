@@ -15,12 +15,11 @@ GetCameraDataAction::~GetCameraDataAction()
 
 BT::PortsList GetCameraDataAction::providedPorts()
 {
-  return {
-    BT::InputPort<std::vector<std::string>>("topic_names", "Topics to receive a synchronized msg"),
-    BT::OutputPort<ImageMsg::ConstSharedPtr>("rgb_image", "RGB image"),
-    BT::OutputPort<ImageMsg::ConstSharedPtr>("depth_image", "Depth image"),
-    BT::OutputPort<CameraInfoMsg::ConstSharedPtr>("cam_info", "Camera intrinsics")
-  };
+  return providedBasicPorts({
+    BT::OutputPort<ImageMsg::ConstSharedPtr>("rgb_image"),
+    BT::OutputPort<ImageMsg::ConstSharedPtr>("depth_image"),
+    BT::OutputPort<CameraInfoMsg::ConstSharedPtr>("cam_info")
+  });
 }
 
 BT::NodeStatus GetCameraDataAction::onTick(
@@ -32,7 +31,14 @@ BT::NodeStatus GetCameraDataAction::onTick(
   setOutput("depth_image", depth_msg_);
   setOutput("cam_info", cam_info_msg);
 
-  RCLCPP_INFO(logger_, "RGB-D messages received");
+  RCLCPP_DEBUG(
+    logger_, "Images of size %dx%d and %dx%d received.",
+    rgb_msg_->width, rgb_msg_->height,
+    depth_msg_->width, depth_msg_->height);
+
+  RCLCPP_DEBUG(logger_, "RGB optical frame: %s", rgb_msg_->header.frame_id.c_str());
+  RCLCPP_DEBUG(logger_, "Depth optical frame: %s", depth_msg_->header.frame_id.c_str());
+
   return BT::NodeStatus::SUCCESS;
 }
 

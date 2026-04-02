@@ -15,13 +15,12 @@ PredictAction::~PredictAction()
 
 BT::PortsList PredictAction::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("service_name", "Service name"),
-    BT::InputPort<ImageMsg::ConstSharedPtr>("rgb_image", "RGB image"),
-    BT::InputPort<ImageMsg::ConstSharedPtr>("depth_image", "Depth image"),
-    BT::InputPort<CameraInfoMsg::ConstSharedPtr>("cam_info", "Camera intrinsics"),
+  return providedBasicPorts({
+    BT::InputPort<ImageMsg::ConstSharedPtr>("rgb_image"),
+    BT::InputPort<ImageMsg::ConstSharedPtr>("depth_image"),
+    BT::InputPort<CameraInfoMsg::ConstSharedPtr>("cam_info"),
     BT::OutputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects")
-  };
+  });
 }
 
 bool PredictAction::send_request(std::shared_ptr<DetectObjectsSrv::Request>& request)
@@ -43,7 +42,7 @@ bool PredictAction::send_request(std::shared_ptr<DetectObjectsSrv::Request>& req
     return false;
   }
 
-  RCLCPP_INFO(logger_, "Sending request with image %d x %d.", rgb_image->width, rgb_image->height);
+  RCLCPP_INFO(logger_, "Sending a request.");
 
   request->rgb_image = *rgb_image;
   request->depth_image = *depth_image;

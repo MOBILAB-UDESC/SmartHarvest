@@ -54,7 +54,7 @@ private:
   bool send_request(std::shared_ptr<DetectObjectsSrv::Request>& request);
 
   /**
-   * @brief Receives synchronized messages from tick.
+   * @brief Receives service response from tick.
    *
    * @return BT::NodeStatus SUCCESS or FAILURE.
    */
