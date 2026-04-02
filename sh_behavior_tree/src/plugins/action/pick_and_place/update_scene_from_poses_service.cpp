@@ -1,27 +1,26 @@
-#include "sh_behavior_tree/plugins/action/pick_and_place/update_scene_from_poses_action.hpp"
+#include "sh_behavior_tree/plugins/action/pick_and_place/update_scene_from_poses_service.hpp"
 
 namespace sh_behavior_tree
 {
 
-UpdateSceneFromPosesAction::UpdateSceneFromPosesAction(
+UpdateSceneFromPosesService::UpdateSceneFromPosesService(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
     sh_bt_base_template::BTServiceNode<
       rclcpp_lifecycle::LifecycleNode, UpdatePlanningSceneFromPosesSrv>(action_name, node_config)
 {}
 
-UpdateSceneFromPosesAction::~UpdateSceneFromPosesAction()
+UpdateSceneFromPosesService::~UpdateSceneFromPosesService()
 {}
 
-BT::PortsList UpdateSceneFromPosesAction::providedPorts()
+BT::PortsList UpdateSceneFromPosesService::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("service_name", "Service name"),
+  return providedBasicPorts({
     BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects")
-  };
+  });
 }
 
-bool UpdateSceneFromPosesAction::send_request(
+bool UpdateSceneFromPosesService::send_request(
   std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request>& request)
 {
   if (!getInput("objects", request->detected_objects)) {
@@ -33,7 +32,7 @@ bool UpdateSceneFromPosesAction::send_request(
   return true;
 }
 
-BT::NodeStatus UpdateSceneFromPosesAction::onTick(
+BT::NodeStatus UpdateSceneFromPosesService::onTick(
   const std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Response>& response)
 {
   if (!response->success) {
@@ -53,9 +52,9 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<sh_behavior_tree::UpdateSceneFromPosesAction>(name, config);
+      return std::make_unique<sh_behavior_tree::UpdateSceneFromPosesService>(name, config);
     };
 
-  factory.registerBuilder<sh_behavior_tree::UpdateSceneFromPosesAction>(
-    "UpdateSceneFromPosesAction", builder);
+  factory.registerBuilder<sh_behavior_tree::UpdateSceneFromPosesService>(
+    "UpdateSceneFromPosesService", builder);
 }

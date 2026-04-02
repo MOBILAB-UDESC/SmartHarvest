@@ -1,5 +1,5 @@
-#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_ACTION_HPP_
-#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_ACTION_HPP_
+#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_SERVICE_HPP_
+#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_SERVICE_HPP_
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
@@ -13,26 +13,26 @@ namespace sh_behavior_tree
 using ClearPlanningSceneSrv = sh_interfaces::srv::ClearPlanningScene;
 
 /**
- * @class sh_behavior_tree::ClearPlanningSceneAction
+ * @class sh_behavior_tree::ClearPlanningSceneService
  * @brief BehaviorTree Action Node that clears MoveIt 2 planning scene.
  */
-class ClearPlanningSceneAction :
+class ClearPlanningSceneService :
   public sh_bt_base_template::BTServiceNode<rclcpp_lifecycle::LifecycleNode, ClearPlanningSceneSrv>
 {
 public:
   /**
-   * @brief A constructor for sh_behavior_tree::ClearPlanningSceneAction class.
+   * @brief A constructor for sh_behavior_tree::ClearPlanningSceneService class.
    *
    * @param action_name Name of the action node in the BehaviorTree.
    * @param node_config Configuration of the BehaviorTree Node.
    */
-  explicit ClearPlanningSceneAction(
+  explicit ClearPlanningSceneService(
     const std::string & action_name, const BT::NodeConfig & node_config);
 
   /**
-   * @brief A destructor for sh_behavior_tree::ClearPlanningSceneAction class.
+   * @brief A destructor for sh_behavior_tree::ClearPlanningSceneService class.
    */
-  ~ClearPlanningSceneAction();
+  ~ClearPlanningSceneService();
 
   /**
    * @brief Creates list of BT ports.
@@ -61,4 +61,4 @@ private:
 }  // namespace sh_behavior_tree
 
 
-#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_ACTION_HPP_
+#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_SERVICE_HPP_

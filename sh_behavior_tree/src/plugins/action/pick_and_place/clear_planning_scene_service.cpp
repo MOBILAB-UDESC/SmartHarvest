@@ -1,33 +1,31 @@
-#include "sh_behavior_tree/plugins/action/pick_and_place/clear_planning_scene_action.hpp"
+#include "sh_behavior_tree/plugins/action/pick_and_place/clear_planning_scene_service.hpp"
 
 namespace sh_behavior_tree
 {
 
-ClearPlanningSceneAction::ClearPlanningSceneAction(
+ClearPlanningSceneService::ClearPlanningSceneService(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
     sh_bt_base_template::BTServiceNode<
       rclcpp_lifecycle::LifecycleNode, ClearPlanningSceneSrv>(action_name, node_config)
 {}
 
-ClearPlanningSceneAction::~ClearPlanningSceneAction()
+ClearPlanningSceneService::~ClearPlanningSceneService()
 {}
 
-BT::PortsList ClearPlanningSceneAction::providedPorts()
+BT::PortsList ClearPlanningSceneService::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("service_name", "Service name")
-  };
+  return providedBasicPorts({});
 }
 
-bool ClearPlanningSceneAction::send_request(std::shared_ptr<ClearPlanningSceneSrv::Request>& request)
+bool ClearPlanningSceneService::send_request(std::shared_ptr<ClearPlanningSceneSrv::Request>& request)
 {
   (void) request;
   // ClearPlanningSceneSrv::Request is empty
   return true;
 }
 
-BT::NodeStatus ClearPlanningSceneAction::onTick(
+BT::NodeStatus ClearPlanningSceneService::onTick(
   const std::shared_ptr<ClearPlanningSceneSrv::Response>& response)
 {
   if (!response->success) {
@@ -47,9 +45,9 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<sh_behavior_tree::ClearPlanningSceneAction>(name, config);
+      return std::make_unique<sh_behavior_tree::ClearPlanningSceneService>(name, config);
     };
 
-  factory.registerBuilder<sh_behavior_tree::ClearPlanningSceneAction>(
-    "ClearPlanningSceneAction", builder);
+  factory.registerBuilder<sh_behavior_tree::ClearPlanningSceneService>(
+    "ClearPlanningSceneService", builder);
 }

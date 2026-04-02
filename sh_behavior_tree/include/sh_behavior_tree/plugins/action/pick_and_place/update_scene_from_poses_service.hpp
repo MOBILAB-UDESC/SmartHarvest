@@ -1,5 +1,5 @@
-#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_ACTION_HPP_
-#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_ACTION_HPP_
+#ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_SERVICE_HPP_
+#define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_SERVICE_HPP_
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
@@ -13,27 +13,27 @@ namespace sh_behavior_tree
 using UpdatePlanningSceneFromPosesSrv = sh_interfaces::srv::UpdatePlanningSceneFromPoses;
 
 /**
- * @class sh_behavior_tree::UpdateSceneFromPosesAction
- * @brief BehaviorTree Action Node that adds detected object into the MoveIt 2 planning scene.
+ * @class sh_behavior_tree::UpdateSceneFromPosesService
+ * @brief BehaviorTree Action Node that adds detected objects into the MoveIt 2 planning scene.
  */
-class UpdateSceneFromPosesAction :
+class UpdateSceneFromPosesService :
   public sh_bt_base_template::BTServiceNode<
     rclcpp_lifecycle::LifecycleNode, UpdatePlanningSceneFromPosesSrv>
 {
 public:
   /**
-   * @brief A constructor for sh_behavior_tree::UpdateSceneFromPosesAction class.
+   * @brief A constructor for sh_behavior_tree::UpdateSceneFromPosesService class.
    *
    * @param action_name Name of the action node in the BehaviorTree.
    * @param node_config Configuration of the BehaviorTree Node.
    */
-  explicit UpdateSceneFromPosesAction(
+  explicit UpdateSceneFromPosesService(
     const std::string & action_name, const BT::NodeConfig & node_config);
 
   /**
-   * @brief A destructor for sh_behavior_tree::UpdateSceneFromPosesAction class.
+   * @brief A destructor for sh_behavior_tree::UpdateSceneFromPosesService class.
    */
-  ~UpdateSceneFromPosesAction();
+  ~UpdateSceneFromPosesService();
 
   /**
    * @brief Creates list of BT ports.
@@ -62,4 +62,4 @@ private:
 }  // namespace sh_behavior_tree
 
 
-#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_ACTION_HPP_
+#endif  // SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_SERVICE_HPP_
