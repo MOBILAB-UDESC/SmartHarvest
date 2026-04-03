@@ -26,7 +26,12 @@ def generate_launch_description():
         parameters=[
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
             LaunchConfiguration('params_file')
-        ]
+        ],
+        # arguments=[
+        #     '--ros-args',
+        #     '--log-level', 'debug',
+        #     '--log-level', 'rcl:=INFO'
+        # ]
     )
 
     configure_event_handler = EmitEvent(
