@@ -36,8 +36,8 @@ BT::NodeStatus CheckErrorIds::tick()
     case ErrorCodes::SUCCESS:
       ++collected_object;
       ++in_current_count;
-      if (in_current_count >= total_objects) {
-        setOutput("collected_object", collected_object);
+      setOutput("collected_object", collected_object);
+      if (in_current_count > total_objects) {
         RCLCPP_INFO(logger_, "%d/%d objects have been collected.", collected_object, total_objects);
         return BT::NodeStatus::SUCCESS;
       }
