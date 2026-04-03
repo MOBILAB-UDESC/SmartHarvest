@@ -23,11 +23,11 @@ BT::PortsList GetNextObjectToPick::providedPorts()
 BT::NodeStatus GetNextObjectToPick::tick()
 {
   int in_current_count;
-  std::string object_prefix;
+  std::string object_name_prefix;
   getInput("in_current_count", in_current_count);
-  getInput("object_prefix", object_prefix);
+  getInput("object_name_prefix", object_name_prefix);
 
-  setOutput("current_object_name", object_prefix+"_"+std::to_string(in_current_count));
+  setOutput("current_object_name", object_name_prefix+"_"+std::to_string(in_current_count));
 
   return BT::NodeStatus::SUCCESS;
 }
