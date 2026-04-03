@@ -45,7 +45,6 @@ private:
   BT::NodeStatus tick() override;
 
   rclcpp::Logger logger_;
-  sh_interfaces::msg::DetectedObjects detected_objects;
 };
 
 }  // namespace sh_behavior_tree

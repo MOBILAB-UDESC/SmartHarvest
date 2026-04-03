@@ -2,90 +2,123 @@
 
   <BehaviorTree ID="MainTree">
     <RetryUntilSuccessful num_attempts="1">
-      <Sequence name="MainSequence">
-<!--
-        <MoveArmToNamedTargetAction
-          action_name="move_to_named_target" group_name="arm" named_target="hook"
-          error_code="{error_code}" /> -->
 
+      <!-- Some {variables} are defined in sh_bt_core using yaml/blackboard config -->
+
+      <Sequence name="MainSequence">
         <!-- Try to detect objects from one of two cameras -->
         <Fallback name="PredictionFallback">
-          <!-- camera_default_topics are defined in the yaml config -->
-          <SubTree ID="DetectionTree" name="JackalCamera"
+          <SubTree ID="DetectionTreeBase"
             topic_names="{camera_default_topics}"
+            sync_timeout="{default_sync_timeout}"
             service_name="{detection_service_name}"
+            service_response_timeout="{default_service_response_timeout}"
             _autoremap="true" />
-          <SubTree ID="DetectionTree"
+          <SubTree ID="DetectionTreeArm"
             topic_names="arm_camera_1/rgb/image;arm_camera_1/depth/image;arm_camera_1/rgb/camera_info"
+            sync_timeout="{default_sync_timeout}"
             service_name="{detection_service_name}"
+            service_response_timeout="{default_service_response_timeout}"
             _autoremap="true" />
         </Fallback>
 
+        <!-- Update Grasp Orientation -->
+        <ComputeGraspOrientation objects="{objects}" />
+
         <!-- Transform objects poses into a static frame -->
-        <TransformPoseAction name="transform_pose_action"
+        <TransformObjectPose
           transform_frame="base_link" objects="{objects}"
           transformed_objects="{objects}" />
-        <ClearPlanningSceneAction service_name="clear_scene" />
-        <UpdateSceneFromPosesAction service_name="update_from_pose_scene" objects="{objects}" />
+
+        <!-- Setting up the planning scene -->
+        <ClearPlanningSceneService
+          service_name="{clear_scene_service_name}" service_response_timeout="{default_service_response_timeout}" />
+        <UpdateSceneFromPosesService
+          service_name="{update_scene_service_name}" service_response_timeout="{default_service_response_timeout}"
+            objects="{objects}" />
+
         <MoveGripperAction
-          action_name="move_to_named_target" group_name="gripper" named_target="open"
+          action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+            group_name="gripper" named_target="open"
           error_code="{error_code}" />
+
+        <!-- Store variables into the blackboard -->
         <Script code=" n_objects := total_objects " />
         <Script code=" index := 1 " />
         <Script code=" n_collected_objects := 0 " />
 
-        <SubTree ID="MoveTree"
-          _autoremap="true" />
+        <!-- Pick/Skip all detected apples -->
+        <RetryUntilSuccessful name="PickLoop" num_attempts="{total_objects}">
+          <SubTree ID="MoveTree"
+            _autoremap="true" />
+        </RetryUntilSuccessful>
 
       </Sequence>
     </RetryUntilSuccessful>
   </BehaviorTree>
 
-  <BehaviorTree ID="DetectionTree">
-    <Sequence name="DetectionSequence">
-      <GetCameraDataAction
-        topic_names="{topic_names}"
+  <!-- DETECTION STAGE -->
+  <BehaviorTree ID="DetectionTreeBase">
+    <Sequence name="DetectionSequenceBase">
+      <GetCameraDataAction name="GetCameraDataAction_Base"
+        topic_names="{topic_names}" sync_timeout="{sync_timeout}"
         rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}" />
-      <PredictAction
-        service_name="{service_name}" rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
+      <PredictAction name="PredictAction_Base"
+        service_name="{service_name}" service_response_timeout="{service_response_timeout}"
+          rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
         objects="{objects}" />
-      <AreObjectsFoundCondition
+      <AreObjectsFoundCondition name="AreObjectsFoundCondition_Base"
         objects="{objects}"
         total_objects="{total_objects}" />
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="MoveTree">
-    <RetryUntilSuccessful name="PickLoop" num_attempts="{total_objects}">
+  <BehaviorTree ID="DetectionTreeArm">
+    <Sequence name="DetectionSequenceArm">
+      <GetCameraDataAction name="GetCameraDataAction_Arm"
+        topic_names="{topic_names}" sync_timeout="0.5"
+        rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}" />
+      <PredictAction name="PredictAction_Arm"
+        service_name="{service_name}" service_response_timeout="{service_response_timeout}"
+          rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
+        objects="{objects}" />
+      <AreObjectsFoundCondition name="AreObjectsFoundCondition_Arm"
+        objects="{objects}"
+        total_objects="{total_objects}" />
+    </Sequence>
+  </BehaviorTree>
 
+  <!-- PICK AND PLACE STAGE -->
+  <BehaviorTree ID="MoveTree">
     <Sequence name="MoveSequence">
       <ForceSuccess>
-        <Fallback name="PickFallback">
-          <Sequence name="PickSequence">
-            <GetCurrentObjectAction in_current_count="{index}" object_prefix="Apple"
-              current_object_name="{object_name}" />
-            <MoveArmToDetectedObjectAction
-              action_name="move_to_object" group_name="arm" object_name="{object_name}"
-              error_code="{error_code}" />
-            <MoveGripperAction
-              action_name="move_to_named_target" group_name="gripper" named_target="half-close"
+        <Sequence name="PickSequence">
+          <GetNextObjectToPick in_current_count="{index}" object_name_prefix="{object_name_prefix}"
+            current_object_name="{object_name}" />
+          <MoveArmToDetectedObjectAction name="MoveToPickAction"
+            action_name="{move_to_object_action_name}" action_response_timeout="{default_action_response_timeout}"
+              group_name="arm" object_name="{object_name}"
+            error_code="{error_code}" />
+          <MoveGripperAction name="AttachObjectAction"
+            action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+              group_name="gripper" named_target="half-close"
               attach="1" detach="0" object_to_attach_detach="{object_name}" link_to_attach_detach="arm_gripper_base_link"
-              error_code="{error_code}" />
-            <MoveArmToNamedTargetAction
-              action_name="move_to_named_target" group_name="arm" named_target="place"
-              error_code="{error_code}" />
-            <MoveGripperAction
-              action_name="move_to_named_target" group_name="gripper" named_target="open"
+            error_code="{error_code}" />
+          <MoveArmToNamedTargetAction name="MoveToPlaceAction"
+            action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+              group_name="arm" named_target="place"
+            error_code="{error_code}" />
+          <MoveGripperAction name="DetachObjectAction"
+            action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+              group_name="gripper" named_target="open"
               attach="0" detach="1" object_to_attach_detach="{object_name}"
-              error_code="{error_code}" />
-          </Sequence>
-        </Fallback>
+            error_code="{error_code}" />
+        </Sequence>
       </ForceSuccess>
-      <ErrorCheckerAction error_id="{error_code}" in_current_count="{index}" total_objects="{total_objects}"
+      <CheckErrorIds
+        error_id="{error_code}" in_current_count="{index}" total_objects="{total_objects}"
         out_next_count="{index}" collected_object="{n_collected_objects}"/>
     </Sequence>
-
-    </RetryUntilSuccessful>
   </BehaviorTree>
 
 </root>

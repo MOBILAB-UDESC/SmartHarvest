@@ -31,9 +31,13 @@ add_library(get_camera_data_action SHARED src/plugins/action/detection/get_camer
 
 add_library(predict_action SHARED src/plugins/action/detection/predict_action.cpp)
 
-add_library(clear_planning_scene_action SHARED src/plugins/action/pick_and_place/clear_planning_scene_action.cpp)
+add_library(transform_object_pose SHARED src/plugins/action/common/transform_object_pose.cpp)
 
-add_library(update_scene_from_poses_action SHARED src/plugins/action/pick_and_place/update_scene_from_poses_action.cpp)
+add_library(compute_grasp_orientation SHARED src/plugins/action/pick_and_place/compute_grasp_orientation.cpp)
+
+add_library(clear_planning_scene_service SHARED src/plugins/action/pick_and_place/clear_planning_scene_service.cpp)
+
+add_library(update_scene_from_poses_service SHARED src/plugins/action/pick_and_place/update_scene_from_poses_service.cpp)
 
 add_library(move_arm_to_named_target_action SHARED src/plugins/action/pick_and_place/move_arm_to_named_target_action.cpp)
 
@@ -41,11 +45,9 @@ add_library(move_arm_to_detected_object_action SHARED src/plugins/action/pick_an
 
 add_library(move_gripper_action SHARED src/plugins/action/pick_and_place/move_gripper_action.cpp)
 
-add_library(error_checker_action SHARED src/plugins/action/pick_and_place/error_checker_action.cpp)
+add_library(check_error_ids SHARED src/plugins/action/pick_and_place/check_error_ids.cpp)
 
-add_library(get_current_object_action SHARED src/plugins/action/pick_and_place/get_current_object_action.cpp)
-
-add_library(transform_pose_action SHARED src/plugins/action/common/transform_pose_action.cpp)
+add_library(get_next_object_to_pick SHARED src/plugins/action/pick_and_place/get_next_object_to_pick.cpp)
 
 # CONDITIONS
 add_library(are_objects_found_condition SHARED src/plugins/condition/detection/are_objects_found_condition.cpp)
@@ -55,14 +57,17 @@ set(bt_nodes
   get_camera_data_action
   get_odometry_action
   predict_action
-  clear_planning_scene_action
-  update_scene_from_poses_action
+
+  transform_object_pose
+
+  compute_grasp_orientation
+  clear_planning_scene_service
+  update_scene_from_poses_service
   move_arm_to_named_target_action
   move_arm_to_detected_object_action
   move_gripper_action
-  error_checker_action
-  get_current_object_action
-  transform_pose_action
+  check_error_ids
+  get_next_object_to_pick
   # CONDITIONS
   are_objects_found_condition)
 

@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<root BTCPP_format="4">
+  <TreeNodesModel>
+
+    <!-- PREDICTION NODES -->
+
+    <Action ID="GetCameraDataAction">
+      <input_port name="sync_timeout">Synchronization timeout</input_port>
+      <input_port name="topic_names">Topics to receive synchronized msgs</input_port>
+      <output_port name="cam_info">Camera intrinsics</output_port>
+      <output_port name="depth_image">Depth image</output_port>
+      <output_port name="rgb_image">RGB image</output_port>
+    </Action>
+
+    <Action ID="PredictAction">
+      <input_port name="service_name">Name of the service server</input_port>
+      <input_port name="service_response_timeout">Response timeout</input_port>
+      <input_port name="rgb_image">RGB image</input_port>
+      <input_port name="depth_image">Depth image</input_port>
+      <input_port name="cam_info">Camera intrinsics</input_port>
+      <output_port name="objects">List of detected objects</output_port>
+    </Action>
+
+    <Condition ID="AreObjectsFoundCondition">
+      <input_port name="objects">List of detected objects</input_port>
+      <output_port name="total_objects">Number of detected objects</output_port>
+    </Condition>
+
+    <!-- COMMON NODES -->
+
+    <Action ID="TransformObjectPose">
+      <input_port name="transform_frame">Frame to transform detected objects</input_port>
+      <input_port name="objects">List of detected objects</input_port>
+      <output_port name="transformed_objects">List of detected objects with poses transformed into a target frame</output_port>
+    </Action>
+
+    <!-- PICK AND PLACE NODES -->
+
+    <Action ID="ComputeGraspOrientation">
+      <inout_port name="objects">List of detected objects</inout_port>
+    </Action>
+
+    <Action ID="ClearPlanningSceneService">
+      <input_port name="service_name">Name of the service server</input_port>
+      <input_port name="service_response_timeout">Response timeout</input_port>
+    </Action>
+
+    <Action ID="UpdateSceneFromPosesService">
+      <input_port name="service_name">Name of the service server</input_port>
+      <input_port name="service_response_timeout">Response timeout</input_port>
+      <input_port name="objects">List of detected objects</input_port>
+    </Action>
+
+    <Action ID="MoveGripperAction">
+      <input_port name="action_name">Name of the action server</input_port>
+      <input_port name="action_response_timeout">Response timeout</input_port>
+      <input_port name="group_name">Plannig group name</input_port>
+      <input_port name="named_target">Predifined NamedTarget from the SRDF</input_port>
+      <input_port name="attach">Wheter to attach an object</input_port>
+      <input_port name="detach">Wheter to detach an object</input_port>
+      <input_port name="object_to_attach_detach">Object name to attach/detach</input_port>
+      <input_port name="link_to_attach_detach">Link name to attach/detach</input_port>
+      <output_port name="error_code">Error ID</output_port>
+    </Action>
+
+    <Action ID="GetNextObjectToPick">
+      <input_port name="in_current_count">Current count to pick</input_port>
+      <input_port name="object_name_prefix">Object name prefix</input_port>
+      <input_port name="current_object_name">Object name</input_port>
+    </Action>
+
+    <Action ID="MoveArmToDetectedObjectAction">
+      <input_port name="action_name">Name of the action server</input_port>
+      <input_port name="action_response_timeout">Response timeout</input_port>
+      <input_port name="group_name">Plannig group name</input_port>
+      <input_port name="object_name">Object name to pick (in the planning scene)</input_port>
+      <output_port name="error_code">Error ID</output_port>
+    </Action>
+
+    <Action ID="MoveArmToNamedTargetAction">
+      <input_port name="action_name">Name of the action server</input_port>
+      <input_port name="action_response_timeout">Response timeout</input_port>
+      <input_port name="group_name">Plannig group name</input_port>
+      <input_port name="named_target">Predifined NamedTarget from the SRDF</input_port>
+      <output_port name="error_code">Error ID</output_port>
+    </Action>
+
+    <Action ID="CheckErrorIds">
+      <input_port name="error_id">Error ID</input_port>
+      <input_port name="in_current_count">Current count of objects available to pick</input_port>
+      <input_port name="total_objects">Total number of detected objects</input_port>
+      <input_port name="out_next_count">Updated count after the action</input_port>
+      <inout_port name="collected_object">Count for collected objects</inout_port>
+    </Action>
+
+  </TreeNodesModel>
+</root>
