@@ -86,8 +86,34 @@ public:
   virtual BT::NodeStatus on_success(
     const typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult& result) = 0;
 
+  /**
+   * @brief Creates list of BT ports
+   * @return PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedPorts()
+  {
+    return providedBasicPorts({});
+  }
+
 protected:
   rclcpp::Logger logger_;
+
+  /**
+   * @brief Any subclass of BTActionNode that accepts parameters must provide a
+   * providedPorts method and call providedBasicPorts in it.
+   * @param addition Additional ports to add to BT port list
+   * @return BT::PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedBasicPorts(BT::PortsList addition)
+  {
+    BT::PortsList basic = {
+      BT::InputPort<std::string>("action_name"),
+      BT::InputPort<double>("action_response_timeout"),
+    };
+    basic.insert(addition.begin(), addition.end());
+
+    return basic;
+  }
 
 private:
   /**
@@ -151,10 +177,10 @@ inline BTActionNode<NodeT, ActionT>::BTActionNode(
 
   // Blackboard/BT ports variables
   node_ = node_config.blackboard->get<typename NodeT::WeakPtr>("root_node");
-  action_response_timeout_ = node_config.blackboard->get<double>("action_response_timeout");
   wait_for_action_timeout_ = node_config.blackboard->get<double>("wait_for_action_timeout");
   std::string action_server_name;
   getInput("action_name", action_server_name);
+  getInput("action_response_timeout", action_response_timeout_);
 
   create_action_client(action_server_name);
 
@@ -236,7 +262,7 @@ inline BT::NodeStatus BTActionNode<NodeT, ActionT>::tick()
 
   executor_.spin_some();
 
-  if (std::chrono::steady_clock::now() > timeout_deadline_) {
+  if (action_response_timeout_ > 0.0 && std::chrono::steady_clock::now() > timeout_deadline_) {
     on_timeout();
     RCLCPP_ERROR(logger_, "No response received in %.3f seconds.", action_response_timeout_);
     setStatus(BT::NodeStatus::FAILURE);

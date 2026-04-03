@@ -15,8 +15,7 @@ MoveGripperAction::~MoveGripperAction()
 
 BT::PortsList MoveGripperAction::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("action_name", "Action name."),
+  return providedBasicPorts({
     BT::InputPort<std::string>("group_name", "Plannig group name."),
     BT::InputPort<std::string>("named_target", "Predifined NamedTarget from the SRDF."),
     BT::InputPort<bool>("attach", false, "Wheter to attach an object."),
@@ -24,7 +23,7 @@ BT::PortsList MoveGripperAction::providedPorts()
     BT::InputPort<std::string>("object_to_attach_detach", "", "Object name to attach/detach."),
     BT::InputPort<std::string>("link_to_attach_detach", "", "Link name to attach/detach."),
     BT::OutputPort<int>("error_code", "Error ID.")
-  };
+  });
 }
 
 bool MoveGripperAction::update_goal(std::shared_ptr<typename MoveToNamedTargetAction::Goal>& goal_msg)
@@ -54,7 +53,6 @@ BT::NodeStatus MoveGripperAction::on_success(
   const typename rclcpp_action::ClientGoalHandle<MoveToNamedTargetAction>::WrappedResult& result)
 {
   RCLCPP_INFO(logger_, "Result is: %s", result.result->message.c_str());
-  setStatus(BT::NodeStatus::SUCCESS);
   setOutput("error_code", sh_interfaces::msg::ErrorCodes::SUCCESS);
   return BT::NodeStatus::SUCCESS;
 }
@@ -64,7 +62,6 @@ void MoveGripperAction::on_failure(
 {
   RCLCPP_ERROR(logger_, result.result->message.c_str());
   setOutput("error_code", sh_interfaces::msg::ErrorCodes::PLANNING_FAILED);
-  setStatus(BT::NodeStatus::FAILURE);
 }
 
 }  // namespace sh_behavior_tree

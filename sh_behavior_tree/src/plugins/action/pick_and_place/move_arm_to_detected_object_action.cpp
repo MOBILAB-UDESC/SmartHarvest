@@ -15,12 +15,11 @@ MoveArmToDetectedObjectAction::~MoveArmToDetectedObjectAction()
 
 BT::PortsList MoveArmToDetectedObjectAction::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("action_name", "Action name"),
+  return providedBasicPorts({
     BT::InputPort<std::string>("group_name", "Plannig group name."),
-    BT::InputPort<std::string>("object_name", "Object from the planning scene."),
+    BT::InputPort<std::string>("object_name", "Object in the planning scene."),
     BT::OutputPort<int>("error_code", "Error ID.")
-  };
+  });
 }
 
 bool MoveArmToDetectedObjectAction::update_goal(std::shared_ptr<typename MoveToObjectAction::Goal>& goal_msg)

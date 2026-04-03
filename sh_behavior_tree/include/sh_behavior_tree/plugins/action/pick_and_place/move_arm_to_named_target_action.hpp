@@ -16,7 +16,7 @@ using GoalHandleMoveToNamedTargetAction = rclcpp_action::ClientGoalHandle<MoveTo
 
 /**
  * @class sh_behavior_tree::MoveArmToNamedTargetAction
- * @brief BehaviorTree Action Node that moves the arm to the a named target pose.
+ * @brief BehaviorTree Action Node that moves the arm to a named target pose.
  */
 class MoveArmToNamedTargetAction :
   public sh_bt_base_template::BTActionNode<rclcpp_lifecycle::LifecycleNode, MoveToNamedTargetAction>

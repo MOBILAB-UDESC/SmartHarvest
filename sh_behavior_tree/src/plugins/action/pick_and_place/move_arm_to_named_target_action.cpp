@@ -15,12 +15,11 @@ MoveArmToNamedTargetAction::~MoveArmToNamedTargetAction()
 
 BT::PortsList MoveArmToNamedTargetAction::providedPorts()
 {
-  return {
-    BT::InputPort<std::string>("action_name", "Action name."),
+  return providedBasicPorts({
     BT::InputPort<std::string>("group_name", "Plannig group name."),
     BT::InputPort<std::string>("named_target", "Predifined NamedTarget from the SRDF."),
     BT::OutputPort<int>("error_code", "Error ID.")
-  };
+  });
 }
 
 bool MoveArmToNamedTargetAction::update_goal(std::shared_ptr<typename MoveToNamedTargetAction::Goal>& goal_msg)
