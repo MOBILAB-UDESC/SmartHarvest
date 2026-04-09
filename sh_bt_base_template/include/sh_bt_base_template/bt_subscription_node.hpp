@@ -6,18 +6,16 @@
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
 
-#include "sh_interfaces/msg/error_codes.hpp"
-
 namespace sh_bt_base_template
 {
 /**
- * @brief Abstract class for managing a ROS 2 subscriber.
+ * @brief Non-blocking abstract class for managing a ROS 2 subscriber.
  *
  * @tparam NodeType ROS 2 node type (rclcpp::Node or rclcpp_lifecycle::LifecycleNode).
  * @tparam TopicType Message type.
  */
 template <class NodeType, class TopicType>
-class BTSubscriptionNode : public BT::SyncActionNode
+class BTSubscriptionNode : public BT::ActionNodeBase
 {
 public:
   /**
@@ -41,42 +39,91 @@ public:
    *
    * Main execution function required by BehaviorTree. Waits for a message to arrive
    * or the timeout expires.
-   * On SUCCESS, calls onTick() function.
+   * On success, calls on_tick() function.
+   * On timeout, calls on_timeout() function.
    *
-   * @return BT::NodeStatus SUCCESS or FAILURE.
+   * @return BT::NodeStatus SUCCESS, FAILURE or RUNNING.
    */
   BT::NodeStatus tick() override final;
 
-  /** Callback invoked by tick() when a message arrives.
+  /** Callback invoked by tick() when a new message is available.
    *
-   * Implement a custom application logic here with the latest message.
-   * @param last_msg ROS 2 topic message.
+   * Custom application logic must be implemented here.
+   * @param last_msg Latest message received.
    *
-   * @return BT::NodeStatus SUCCESS or FAILURE.
+   * @return BT::NodeStatus SUCCESS, FAILURE or RUNNING.
    */
-  virtual BT::NodeStatus onTick(
+  virtual BT::NodeStatus on_tick(
     const std::shared_ptr<TopicType>& last_msg) = 0;
 
-  /**
-   * @brief Controls whether the last received message set is retained after a tick.
+  /** Callback invoked by tick() when no message arrives on time.
    *
-   * @return false by default. Override to return true if needed.
+   * Custom application logic must be implemented here.
+   *
+   * @return BT::NodeStatus SUCCESS, FAILURE or RUNNING.
    */
-  virtual bool keep_last_message() const
+  virtual BT::NodeStatus on_timeout() {
+    RCLCPP_ERROR(logger_, "No message received in %.3f seconds.", sub_timeout_);
+    return BT::NodeStatus::FAILURE;
+  }
+
+  /**
+   * @brief BehaviorTree halt callback.
+   *
+   * Clears buffered message state and resets BT status.
+   */
+  void halt() override
   {
-    return false;
+    {
+      std::lock_guard<std::mutex> lock(sub_mutex_);
+      last_msg_.reset();
+    }
+    resetStatus();
+  }
+
+  /**
+   * @brief Creates list of BT ports
+   * @return PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedPorts()
+  {
+    return providedBasicPorts({});
   }
 
 protected:
   rclcpp::Logger logger_;
 
+  /**
+   * @brief Any subclass of BTSubscriptionNode that accepts parameters must provide a
+   * providedPorts method and call providedBasicPorts in it.
+   * @param addition Additional ports to add to BT port list
+   * @return PortsList Containing basic ports along with node-specific ports
+   */
+  static BT::PortsList providedBasicPorts(BT::PortsList addition)
+  {
+    BT::PortsList basic = {
+      BT::InputPort<std::string>("topic_name", "Topic to subscribe to."),
+      BT::InputPort<double>("sub_timeout"),
+    };
+    basic.insert(addition.begin(), addition.end());
+
+    return basic;
+  }
+
 private:
   /**
-   * @brief Initialized the subscriber.
+   * @brief Subscriber initialization.
    *
-   * @param topic_name Name of the topic.
+   * @param topic_name Name of the topic to subscribe to.
    */
   void create_subscriber(const std::string& topic_name);
+
+  void reset_timeout_deadline()
+  {
+    timeout_deadline_ = std::chrono::steady_clock::now() +
+      std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(sub_timeout_));
+  }
 
   // ROS 2 node members
   typename NodeType::WeakPtr node_;
@@ -85,9 +132,11 @@ private:
 
   // Subscriber members
   typename rclcpp::Subscription<TopicType>::SharedPtr subscriber_;
+  double sub_timeout_;
+  std::chrono::steady_clock::time_point timeout_deadline_;
+
   std::mutex sub_mutex_;
   std::shared_ptr<TopicType> last_msg_;
-  double wait_for_msg_timeout_;
 };
 
 //----------------------------------------------------------------
@@ -98,16 +147,22 @@ template <class NodeT, class TopicT>
 inline BTSubscriptionNode<NodeT, TopicT>::BTSubscriptionNode(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-  BT::SyncActionNode(action_name, node_config),
+  BT::ActionNodeBase(action_name, node_config),
   logger_(rclcpp::get_logger(action_name))
 {
   RCLCPP_INFO(logger_, "Configuring.");
 
   // Blackboard/BT ports variables
   node_ = node_config.blackboard->get<typename NodeT::WeakPtr>("root_node");
-  wait_for_msg_timeout_ = node_config.blackboard->get<double>("wait_for_msg_timeout");
   std::string topic_name;
-  getInput("topic_name", topic_name);
+  if (!getInput("topic_name", topic_name)) {
+    RCLCPP_ERROR(logger_, "Missing input 'topic_name'.");
+    throw std::invalid_argument("Missing input 'topic_name'");
+  }
+  if (!getInput("sub_timeout", sub_timeout_)) {
+    RCLCPP_ERROR(logger_, "Missing value in port 'sub_timeout'.");
+    throw std::invalid_argument("Missing input 'sub_timeout'");
+  }
 
   create_subscriber(topic_name);
 
@@ -138,31 +193,32 @@ inline void BTSubscriptionNode<NodeT, TopicT>::create_subscriber(const std::stri
 template <class NodeT, class TopicT>
 inline BT::NodeStatus BTSubscriptionNode<NodeT, TopicT>::tick()
 {
-  auto start = std::chrono::steady_clock::now();
-  auto timeout = std::chrono::duration<double>(wait_for_msg_timeout_);
-  std::shared_ptr<TopicT> msg;
-  while (true) {
-    executor_.spin_some();
-    {
-      std::lock_guard<std::mutex> lock(sub_mutex_);
-      msg = last_msg_;
-    }
-    if (msg) {
-      break;
-    }
-
-    if (std::chrono::steady_clock::now() - start >= timeout) {
-      RCLCPP_INFO(logger_, "No msg arrived in %.3f seconds.", timeout.count());
-      return BT::NodeStatus::FAILURE;
-    }
+  if (!BT::isStatusActive(status())) {
+    reset_timeout_deadline();
+    setStatus(BT::NodeStatus::RUNNING);
   }
 
-  auto status = onTick(msg);
+  executor_.spin_some();
 
-  if (!keep_last_message()) {
+  if (std::chrono::steady_clock::now() > timeout_deadline_) {
+    auto status = on_timeout();
+    reset_timeout_deadline();
+    return status;
+  }
+
+  std::shared_ptr<TopicT> msg_copy;
+  {
     std::lock_guard<std::mutex> lock(sub_mutex_);
+    if (!last_msg_) {
+      return BT::NodeStatus::RUNNING;
+    }
+    msg_copy = last_msg_;
     last_msg_.reset();
   }
+
+  auto status = on_tick(msg_copy);
+
+  reset_timeout_deadline();
 
   return status;
 }
