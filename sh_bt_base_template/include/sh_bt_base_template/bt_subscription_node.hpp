@@ -91,7 +91,9 @@ public:
   }
 
 protected:
+  // ROS 2 node members
   rclcpp::Logger logger_;
+  typename NodeType::WeakPtr node_;
 
   /**
    * @brief Any subclass of BTSubscriptionNode that accepts parameters must provide a
@@ -125,8 +127,7 @@ private:
         std::chrono::duration<double>(sub_timeout_));
   }
 
-  // ROS 2 node members
-  typename NodeType::WeakPtr node_;
+  // Executor settings
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor executor_;
 
