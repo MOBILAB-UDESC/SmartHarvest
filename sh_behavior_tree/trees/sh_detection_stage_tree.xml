@@ -6,21 +6,54 @@
       <!-- Some {variables} are defined in sh_bt_core using yaml/blackboard config -->
 
       <Sequence name="MainSequence">
-        <!-- Try to detect objects from one of two cameras -->
-        <Fallback name="PredictionFallback">
-          <SubTree ID="DetectionTreeBase"
-            topic_names="{camera_default_topics}"
-            sync_timeout="{default_sync_timeout}"
-            service_name="{detection_service_name}"
-            service_response_timeout="{default_service_response_timeout}"
-            _autoremap="true" />
-          <SubTree ID="DetectionTreeArm"
-            topic_names="arm_camera_1/rgb/image;arm_camera_1/depth/image;arm_camera_1/rgb/camera_info"
-            sync_timeout="{default_sync_timeout}"
-            service_name="{detection_service_name}"
-            service_response_timeout="{default_service_response_timeout}"
-            _autoremap="true" />
-        </Fallback>
+
+        <!-- Scan from distance -->
+        <RetryUntilSuccessful num_attempts="4">
+          <Fallback name="ScanFromDistanceFallback">
+            <SubTree ID="DetectionTreeBase"
+              topic_names="{camera_default_topics}"
+              sync_timeout="{default_sync_timeout}"
+              service_name="{detection_service_name}"
+              service_response_timeout="{default_service_response_timeout}"
+              _autoremap="true" />
+            <!-- When no apple is found, rotate the base (PI/2 rad) -->
+            <ForceFailure>
+              <Sequence>
+                <RotateRobot
+                  topic_name="odometry/filtered" sub_timeout="{default_sub_timeout}"
+                    max_w="0.8" angle_rad="1.67" angle_tolerance="0.1" kp="0.75" />
+                <!-- Waits for the robot to stop moving -->
+                <Sleep msec="100"/>
+              </Sequence>
+            </ForceFailure>
+          </Fallback>
+        </RetryUntilSuccessful>
+
+        <!-- Approach Sequence -->
+        <TransformObjectPose
+          transform_frame="base_link" objects="{objects}"
+          transformed_objects="{objects_to_map}" />
+
+        <GetNearestObjectPose
+          objects="{objects_to_map}" safety_dist="0.12"
+          nearest_object="{nearest_object}" />
+
+        <MoveBaseAction
+          action_name="navigate_to_pose" action_response_timeout="{default_action_response_timeout}"
+          goal_pose="{nearest_object}" />
+
+        <!-- Pick and Place Sequence -->
+        <MoveArmToNamedTargetAction name="MoveToHomeAction"
+          action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+            group_name="arm" named_target="pick"
+          error_code="{error_code}" />
+
+        <SubTree ID="DetectionTreeArm"
+          topic_names="arm_camera_1/rgb/image;arm_camera_1/depth/image;arm_camera_1/rgb/camera_info"
+          sync_timeout="{default_sync_timeout}"
+          service_name="{detection_service_name}"
+          service_response_timeout="{default_service_response_timeout}"
+          _autoremap="true" />
 
         <!-- Update Grasp Orientation -->
         <ComputeGraspOrientation objects="{objects}" />

@@ -70,7 +70,7 @@ void BTExecutor::declare_parameters()
 
   declare_parameter("default_sync_timeout", rclcpp::ParameterValue(0.25));
 
-  declare_parameter("default_wait_for_msg_timeout", rclcpp::ParameterValue(0.15));
+  declare_parameter("default_sub_timeout", rclcpp::ParameterValue(0.15));
 
   declare_parameter("default_service_response_timeout", rclcpp::ParameterValue(1.0));
   declare_parameter("wait_for_service_timeout", rclcpp::ParameterValue(2.0));
@@ -111,7 +111,6 @@ BT::Blackboard::Ptr BTExecutor::setup_blackboard()
     get_parameter("default_service_response_timeout").as_double());
   blackboard->set("default_action_response_timeout",
     get_parameter("default_action_response_timeout").as_double());
-
   blackboard->set("wait_for_action_timeout", get_parameter("wait_for_action_timeout").as_double());
 
   blackboard->set("camera_default_topics", get_parameter("camera_default_topics").as_string_array());
@@ -126,7 +125,7 @@ BT::Blackboard::Ptr BTExecutor::setup_blackboard()
   blackboard->set("move_to_object_action_name", get_parameter("move_to_object_action_name").as_string());
   blackboard->set("object_name_prefix", get_parameter("object_name_prefix").as_string());
 
-  blackboard->set("default_wait_for_msg_timeout", get_parameter("default_wait_for_msg_timeout").as_double());
+  blackboard->set("default_sub_timeout", get_parameter("default_sub_timeout").as_double());
 
   return blackboard;
 }

@@ -6,6 +6,7 @@ from launch.actions import (
     LogInfo,
     RegisterEventHandler,
 )
+from launch.conditions import IfCondition
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
@@ -59,6 +60,15 @@ def generate_launch_description():
         )
     )
 
+    detection_image_bridge_node = Node(
+        condition=IfCondition(LaunchConfiguration('use_sim_time')),
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='arm_camera_bridge',
+        output='screen',
+        arguments=[f'detection_image/image@sensor_msgs/msg/Image]gz.msgs.Image',],
+    )
+
     sh_planning_scene_server = Node(
         package='sh_moveit_planning_scene_server',
         executable='sh_moveit_planning_scene_server',
@@ -103,5 +113,6 @@ def generate_launch_description():
         configure_event_handler,
         activate_event_handler,
         sh_planning_scene_server,
-        sh_move_group_server
+        sh_move_group_server,
+        detection_image_bridge_node
     ])

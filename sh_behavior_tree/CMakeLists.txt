@@ -9,6 +9,7 @@ find_package(ament_cmake REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
@@ -25,8 +26,6 @@ set(dependencies
 )
 
 #ACTIONS
-add_library(get_odometry_action SHARED src/plugins/action/navigation/get_odometry_action.cpp)
-
 add_library(get_camera_data_action SHARED src/plugins/action/detection/get_camera_data_action.cpp)
 
 add_library(predict_action SHARED src/plugins/action/detection/predict_action.cpp)
@@ -49,13 +48,17 @@ add_library(check_error_ids SHARED src/plugins/action/pick_and_place/check_error
 
 add_library(get_next_object_to_pick SHARED src/plugins/action/pick_and_place/get_next_object_to_pick.cpp)
 
+add_library(rotate_robot SHARED src/plugins/action/navigation/rotate_robot.cpp)
+
+add_library(move_base_action SHARED src/plugins/action/navigation/move_base_action.cpp)
+
+add_library(get_nearest_object_pose SHARED src/plugins/action/navigation/get_nearest_object_pose.cpp)
 # CONDITIONS
 add_library(are_objects_found_condition SHARED src/plugins/condition/detection/are_objects_found_condition.cpp)
 
 set(bt_nodes
   # ACTIONS
   get_camera_data_action
-  get_odometry_action
   predict_action
 
   transform_object_pose
@@ -68,6 +71,10 @@ set(bt_nodes
   move_gripper_action
   check_error_ids
   get_next_object_to_pick
+
+  rotate_robot
+  move_base_action
+  get_nearest_object_pose
   # CONDITIONS
   are_objects_found_condition)
 
@@ -81,6 +88,7 @@ foreach(bt_node ${bt_nodes})
     sh_bt_base_template::sh_bt_base_template
     ${message_filters_TARGETS}
     ${nav_msgs_TARGETS}
+    ${nav2_msgs_TARGETS}
     ${sensor_msgs_TARGETS}
     ${sh_interfaces_TARGETS}
     ${tf2_geometry_msgs_TARGETS})

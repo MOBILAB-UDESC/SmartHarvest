@@ -4,12 +4,12 @@ sh_bt_core:
     tree_xml_path: ""
     enable_groot: true
 
-    default_sync_timeout: 0.25
+    default_sub_timeout: 0.2
+    default_sync_timeout: 0.5
     wait_for_service_timeout: 3.0
     default_service_response_timeout: 2.0
-
     wait_for_action_timeout: 2.0
-    default_wait_for_msg_timeout: 0.0
+    default_action_response_timeout: 0.0
 
     auto_mode: false
 
@@ -52,7 +52,7 @@ sh_planning_scene_server:
     ground_plane_dimension: [1.0, 1.0, 0.001]
     ground_plane_position: [0.0, 0.0, -0.066]
     target_shape: SPHERE # SPHERE (radius), BOX (x,y,z), CONE (radius, height), CYLINDER (radius, height)
-    target_dimension: [0.03]
+    target_dimension: [0.04]
 
 sh_move_group_server:
   ros__parameters:
@@ -62,21 +62,21 @@ sh_move_group_server:
       move_to_object: move_to_object
     arm_planning_config:
       move_group: arm
-      planning_pipeline: stomp # ompl
-      planner_id: STOMP # TrajOpt
+      planning_pipeline: ompl # ompl
+      # planner_id: STOMP # TrajOpt
       planning_time: 5.0
       planning_attempts: 5
       vel_acc_scaling_factors: [0.5, 0.5]
       override: false
-      STOMP:
-        num_timesteps: "60"
-        num_iterations: "40"
-        num_iterations_after_valid: "0"
-        num_rollouts: "30"
-        max_rollouts: "30"
-        exponentiated_cost_sensitivity: "0.5"
-        control_cost_weight: "0.1"
-        delta_t: "0.1"
+      # STOMP:
+      #   num_timesteps: "60"
+      #   num_iterations: "40"
+      #   num_iterations_after_valid: "0"
+      #   num_rollouts: "30"
+      #   max_rollouts: "30"
+      #   exponentiated_cost_sensitivity: "0.5"
+      #   control_cost_weight: "0.1"
+      #   delta_t: "0.1"
     gripper_planning_config:
       move_group: gripper
       planning_pipeline: stomp # ompl
