@@ -270,7 +270,10 @@ class DetectionServer(LifecycleNode):
             object_info.grasp_orientation_euler[2] = yaw
             object_info.confidence = float(conf)
             object_info.class_id = int(class_id)
-            object_info.distance = object_info.x  # depth, relative to camera_optical_frame
+            if self.use_sim_time:
+                object_info.distance = object_info.x
+            else:
+                object_info.distance = object_info.z
             detected_objects.append(object_info)
 
         return detected_objects
