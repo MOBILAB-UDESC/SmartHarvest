@@ -8,6 +8,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_visual_tools REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sh_interfaces REQUIRED)
 
@@ -26,6 +27,7 @@ target_link_libraries(
   rclcpp::rclcpp
   ${geometry_msgs_TARGETS}
   ${moveit_ros_planning_interface_TARGETS}
+  ${moveit_visual_tools_TARGETS}
   ${sh_interfaces_TARGETS}
 )
 

@@ -4,6 +4,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "moveit/move_group_interface/move_group_interface.hpp"
 #include "moveit/planning_scene_interface/planning_scene_interface.hpp"
+#include "moveit_visual_tools/moveit_visual_tools.h"
 #include "rclcpp/rclcpp.hpp"
 
 #include "sh_interfaces/action/move_to_named_target.hpp"
@@ -134,6 +135,10 @@ private:
    */
   void select_move_group(const std::string& move_group);
 
+  void update_planning_constraints();
+
+  void clear_planning_constraints();
+
   /**
    * @brief Abstract method for planning and execution routine for all action types.
    *
@@ -150,6 +155,7 @@ private:
   // ROS node handles
   rclcpp::Logger logger_;
   rclcpp::Node::SharedPtr node_;
+  rclcpp::Executor::SharedPtr executor_;
 
   // Action servers
   rclcpp_action::Server<MoveToNamedTargetAction>::SharedPtr move_to_named_target_server_;
@@ -173,6 +179,8 @@ private:
   // Planning scene access
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
   std::vector<std::string> scene_objects_name_;
+
+  std::unique_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
 
   // Node parameters and mutex for synchronized access to them
   Parameter params_;

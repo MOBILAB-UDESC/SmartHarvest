@@ -6,7 +6,8 @@ namespace sh_move_group_server
 MoveGroupServer::MoveGroupServer(const std::string& node_name, const rclcpp::NodeOptions& options) :
   rclcpp::Node(node_name, options),
   logger_(rclcpp::get_logger(node_name)),
-  node_(std::make_shared<rclcpp::Node>("move_group_server_node"))
+  node_(std::make_shared<rclcpp::Node>("move_group_server_node")),
+  executor_(std::make_shared<rclcpp::executors::SingleThreadedExecutor>())
 {
   std::string move_to_named_target_action_name, move_to_pose_action_name, move_to_object_action_name;
   this->get_parameter_or<std::string>(
@@ -16,10 +17,15 @@ MoveGroupServer::MoveGroupServer(const std::string& node_name, const rclcpp::Nod
   this->get_parameter_or<std::string>(
     "action_names.move_to_object", move_to_object_action_name, "move_to_object");
 
+  executor_->add_node(node_);
+  std::thread([this]() { executor_->spin(); }).detach();
+
   update_parameters();
   arm_move_group_init();
   gripper_move_group_init();
   selected_move_group_ = arm_move_group_;
+
+  clear_planning_constraints();
 
   using namespace std::placeholders;
   move_to_named_target_server_ = rclcpp_action::create_server<MoveToNamedTargetAction>(
@@ -176,6 +182,9 @@ void MoveGroupServer::arm_move_group_init()
 
   arm_move_group_->setPlannerParams(
     params_.arm.planner_id, params_.arm.move_group, params_.arm.planner_params, false);
+
+  moveit_visual_tools_ = std::make_unique<moveit_visual_tools::MoveItVisualTools>(
+    node_, "base_link", rviz_visual_tools::RVIZ_MARKER_TOPIC, arm_move_group_->getRobotModel());
 }
 
 void MoveGroupServer::gripper_move_group_init()
@@ -199,6 +208,9 @@ void MoveGroupServer::handle_move_to_named_target_accepted(
   std::thread([this](std::shared_ptr<GoalHandleMoveToNamedTargetAction> goal_handle,
     const bool attach, const bool detach,
     const std::string object_to_attach_detach, const std::string link_to_attach_detach) {
+
+    clear_planning_constraints();
+
     auto result = std::make_shared<MoveToNamedTargetAction::Result>();
     select_move_group(goal_move_group_);
 
@@ -241,6 +253,9 @@ void MoveGroupServer::handle_move_to_object_accepted(
     select_move_group(goal_move_group_);
     selected_move_group_->setPoseTarget(object_pose_);
 
+    clear_planning_constraints();
+    update_planning_constraints();
+
     auto plan_and_execute_result = plan_and_execute<MoveToObjectAction>(goal_handle, result);
 
     if (plan_and_execute_result == GoalStatus::ABORTED) {
@@ -263,6 +278,9 @@ void MoveGroupServer::handle_move_to_pose_accepted(
   std::shared_ptr<GoalHandleMoveToPoseAction> goal_handle)
 {
   std::thread([this](std::shared_ptr<GoalHandleMoveToPoseAction> goal_handle) {
+
+    clear_planning_constraints();
+
     auto result = std::make_shared<MoveToPoseAction::Result>();
     select_move_group(goal_move_group_);
     selected_move_group_->setPoseTarget(pose_);
@@ -338,6 +356,58 @@ void MoveGroupServer::select_move_group(const std::string& move_group)
   }
 }
 
+void MoveGroupServer::clear_planning_constraints()
+{
+  selected_move_group_->clearPathConstraints();
+  moveit_visual_tools_->deleteAllMarkers();
+  moveit_visual_tools_->trigger();
+}
+
+void MoveGroupServer::update_planning_constraints()
+{
+  auto current_pose = selected_move_group_->getCurrentPose(selected_move_group_->getEndEffectorLink());
+  moveit_visual_tools_->publishSphere(current_pose.pose, rviz_visual_tools::RED, 0.05);
+  moveit_visual_tools_->publishSphere(object_pose_, rviz_visual_tools::GREEN, 0.05);
+
+  moveit_msgs::msg::PositionConstraint box_constraint;
+  box_constraint.header.frame_id = selected_move_group_->getPoseReferenceFrame();
+  box_constraint.link_name = selected_move_group_->getEndEffectorLink();
+  shape_msgs::msg::SolidPrimitive box;
+  box.type = shape_msgs::msg::SolidPrimitive::BOX;
+  box.dimensions = { 0.1, 0.1, 0.1 };
+  box.dimensions[0] += 2*std::abs(object_pose_.position.x - current_pose.pose.position.x);
+  box.dimensions[1] += 2*std::abs(object_pose_.position.y - current_pose.pose.position.y);
+  box.dimensions[2] += 2*std::abs(object_pose_.position.z - current_pose.pose.position.z);
+
+  box_constraint.constraint_region.primitives.emplace_back(box);
+
+  geometry_msgs::msg::Pose box_pose;
+  box_pose.position.x = current_pose.pose.position.x;
+  box_pose.position.y = current_pose.pose.position.y;
+  box_pose.position.z = current_pose.pose.position.z;
+  box_pose.orientation.w = 1.0;
+
+  box_constraint.constraint_region.primitive_poses.emplace_back(box_pose);
+  box_constraint.weight = 1.0;
+
+  Eigen::Vector3d new_box_point_1(box_pose.position.x - box.dimensions[0] / 2,
+                                  box_pose.position.y - box.dimensions[1] / 2,
+                                  box_pose.position.z - box.dimensions[2] / 2);
+  Eigen::Vector3d new_box_point_2(box_pose.position.x + box.dimensions[0] / 2,
+                                  box_pose.position.y + box.dimensions[1] / 2,
+                                  box_pose.position.z + box.dimensions[2] / 2);
+
+  moveit_visual_tools_->publishCuboid(new_box_point_1, new_box_point_2, rviz_visual_tools::TRANSLUCENT_DARK);
+
+  moveit_visual_tools_->trigger();
+
+  moveit_msgs::msg::Constraints box_constraints;
+  box_constraints.position_constraints.emplace_back(box_constraint);
+
+  selected_move_group_->setPathConstraints(box_constraints);
+  // arm_move_group_->setPlannerId(params_.arm.planner_id);
+}
+
 template <class MoveAction>
 GoalStatus MoveGroupServer::plan_and_execute(
   std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
@@ -367,19 +437,19 @@ GoalStatus MoveGroupServer::plan_and_execute(
   feedback->phase = FeedBackStatus::EXECUTING;
   feedback->message = "Path found.";
   goal_handle->publish_feedback(feedback);
-  auto execution_result = selected_move_group_->execute(plan);
+  // auto execution_result = selected_move_group_->execute(plan);
 
-  if (!execution_result) {
-    if (goal_handle->is_canceling()) {
-      result->success = false;
-      result->message = "Goal canceled.";
-      goal_handle->canceled(result);
-      return GoalStatus::CANCELED;
-    }
-    RCLCPP_ERROR(logger_, "Path execution failed!. Skipped.");
-    result->message = "Path execution failed.";
-    return GoalStatus::ABORTED;
-  }
+  // if (!execution_result) {
+  //   if (goal_handle->is_canceling()) {
+  //     result->success = false;
+  //     result->message = "Goal canceled.";
+  //     goal_handle->canceled(result);
+  //     return GoalStatus::CANCELED;
+  //   }
+  //   RCLCPP_ERROR(logger_, "Path execution failed!. Skipped.");
+  //   result->message = "Path execution failed.";
+  //   return GoalStatus::ABORTED;
+  // }
 
   if (goal_handle->is_canceling()) {
     goal_handle->canceled(result);
