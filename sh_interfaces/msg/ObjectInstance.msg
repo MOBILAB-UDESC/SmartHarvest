@@ -1,0 +1,7 @@
+# Generic object identification
+
+uint32 class_id
+string class_name
+float32 confidence
+
+geometry_msgs/Pose pose

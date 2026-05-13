@@ -6,7 +6,7 @@ namespace sh_behavior_tree
 GetCameraDataAction::GetCameraDataAction(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTSyncSubscriptionNode<
+    sh_base_template::BTSyncSubscriptionNode<
       rclcpp_lifecycle::LifecycleNode, ImageMsg, ImageMsg, CameraInfoMsg>(action_name, node_config)
 {}
 

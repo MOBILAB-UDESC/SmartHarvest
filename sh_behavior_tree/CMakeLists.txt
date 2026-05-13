@@ -14,8 +14,9 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(sh_bt_base_template REQUIRED)
+find_package(sh_base_template REQUIRED)
 find_package(sh_interfaces REQUIRED)
+find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
 include_directories(
@@ -28,7 +29,7 @@ set(dependencies
 #ACTIONS
 add_library(get_camera_data_action SHARED src/plugins/action/detection/get_camera_data_action.cpp)
 
-add_library(predict_action SHARED src/plugins/action/detection/predict_action.cpp)
+add_library(predict_service SHARED src/plugins/action/detection/predict_service.cpp)
 
 add_library(transform_object_pose SHARED src/plugins/action/common/transform_object_pose.cpp)
 
@@ -59,7 +60,7 @@ add_library(are_objects_found_condition SHARED src/plugins/condition/detection/a
 set(bt_nodes
   # ACTIONS
   get_camera_data_action
-  predict_action
+  predict_service
 
   transform_object_pose
 
@@ -76,7 +77,8 @@ set(bt_nodes
   move_base_action
   get_nearest_object_pose
   # CONDITIONS
-  are_objects_found_condition)
+  are_objects_found_condition
+)
 
 # ADD DEPENDENCIES TO LIBRARIES
 foreach(bt_node ${bt_nodes})
@@ -85,12 +87,13 @@ foreach(bt_node ${bt_nodes})
     rclcpp::rclcpp
     rclcpp_action::rclcpp_action
     rclcpp_lifecycle::rclcpp_lifecycle
-    sh_bt_base_template::sh_bt_base_template
+    sh_base_template::sh_base_template
     ${message_filters_TARGETS}
     ${nav_msgs_TARGETS}
     ${nav2_msgs_TARGETS}
     ${sensor_msgs_TARGETS}
     ${sh_interfaces_TARGETS}
+    ${tf2_TARGETS}
     ${tf2_geometry_msgs_TARGETS})
   target_compile_definitions(${bt_node} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
@@ -122,7 +125,7 @@ ament_export_dependencies(
   rclcpp_action
   rclcpp_lifecycle
   sensor_msgs
-  sh_bt_base_template
+  sh_base_template
   sh_interfaces)
 
 if(BUILD_TESTING)

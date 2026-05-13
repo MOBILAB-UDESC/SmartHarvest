@@ -1,5 +1,8 @@
 #include "sh_behavior_tree/plugins/action/common/transform_object_pose.hpp"
 
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+
 namespace sh_behavior_tree
 {
 
@@ -7,7 +10,7 @@ TransformObjectPose::TransformObjectPose(
   const std::string& action_name, const BT::NodeConfig& config):
   BT::SyncActionNode(action_name, config), logger_(rclcpp::get_logger(action_name))
 {
-  RCLCPP_DEBUG(logger_, "Initializing the TF listener.");
+  RCLCPP_INFO(logger_, "Initializing the TF listener.");
 
   node_ = config.blackboard->get<rclcpp_lifecycle::LifecycleNode::WeakPtr>("root_node");
   transformation_timeout_ = config.blackboard->get<double>("transformation_timeout");
@@ -16,60 +19,50 @@ TransformObjectPose::TransformObjectPose(
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  RCLCPP_DEBUG(logger_, "Node created.");
+  RCLCPP_INFO(logger_, "Node created.");
 }
 
 BT::NodeStatus TransformObjectPose::tick()
 {
-  sh_interfaces::msg::DetectedObjects objects;
+  sh_interfaces::msg::PerceptionScene perception_scene;
   std::string transform_frame;
-  if (!getInput("objects", objects)) {
-    RCLCPP_ERROR(logger_, "Missing required input port 'objects'.");
+  if (!getInput("perception_scene", perception_scene)) {
+    RCLCPP_ERROR(logger_, "Missing required input port 'perception_scene'.");
     return BT::NodeStatus::FAILURE;
   }
-  if (!getInput("transform_frame", transform_frame)) {
-    RCLCPP_ERROR(logger_, "Missing required input port 'transform_frame'.");
+  if (!getInput("transformation_frame", transform_frame)) {
+    RCLCPP_ERROR(logger_, "Missing required input port 'transformation_frame'.");
     return BT::NodeStatus::FAILURE;
   }
 
-  if (!transform_pose(objects, transform_frame)) {
+  if (!transform_pose(perception_scene, transform_frame)) {
     return BT::NodeStatus::FAILURE;
   }
   return BT::NodeStatus::SUCCESS;
 }
 
 bool TransformObjectPose::transform_pose(
-  const sh_interfaces::msg::DetectedObjects& objects,
+  const sh_interfaces::msg::PerceptionScene& perception_scene,
   const std::string& transform_frame)
 {
+  int num_objects = perception_scene.objects.size();
   // Lis of transformed objects
-  sh_interfaces::msg::DetectedObjects transformed_objects;
-  transformed_objects.objects.reserve(objects.num_objects);
-  transformed_objects.num_objects = objects.num_objects;
-  transformed_objects.header.frame_id = transform_frame;
-  {
-    auto node = node_.lock();
-    transformed_objects.header.stamp = node->now();
-  }
+  sh_interfaces::msg::PerceptionScene transformed_perception_scene = perception_scene;
+  transformed_perception_scene.header.frame_id = transform_frame;
+  // {
+  //   auto node = node_.lock();
+  //   transformed_perception_scene.header.stamp = node->now();
+  // }
 
   // Transformation handlers
   geometry_msgs::msg::PoseStamped pose_in_stamped;
-  pose_in_stamped.header = objects.header;
+  pose_in_stamped.header = perception_scene.header;
   geometry_msgs::msg::PoseStamped pose_out_stamped;
-  sh_interfaces::msg::SingleObjectInfo transformed_object_info;
 
   tf2::Quaternion q;
-  int index = 1;
 
-  for (auto obj : objects.objects)
-  {
-    pose_in_stamped.pose.position.x = obj.x;
-    pose_in_stamped.pose.position.y = obj.y;
-    pose_in_stamped.pose.position.z = obj.z;
-    pose_in_stamped.pose.orientation.x = obj.grasp_orientation_quaternion[0];
-    pose_in_stamped.pose.orientation.y = obj.grasp_orientation_quaternion[1];
-    pose_in_stamped.pose.orientation.z = obj.grasp_orientation_quaternion[2];
-    pose_in_stamped.pose.orientation.w = obj.grasp_orientation_quaternion[3];
+  for (int i = 0; i < num_objects; ++i) {
+    pose_in_stamped.pose = perception_scene.objects[i].pose;
 
     // Transformation into transform_frame
     try {
@@ -81,24 +74,7 @@ bool TransformObjectPose::transform_pose(
       return false;
     }
 
-    transformed_object_info = obj;
-    transformed_object_info.x = pose_out_stamped.pose.position.x;
-    transformed_object_info.y = pose_out_stamped.pose.position.y;
-    transformed_object_info.z = pose_out_stamped.pose.position.z;
-
-    transformed_object_info.grasp_orientation_quaternion[0] = pose_out_stamped.pose.orientation.x;
-    transformed_object_info.grasp_orientation_quaternion[1] = pose_out_stamped.pose.orientation.y;
-    transformed_object_info.grasp_orientation_quaternion[2] = pose_out_stamped.pose.orientation.z;
-    transformed_object_info.grasp_orientation_quaternion[3] = pose_out_stamped.pose.orientation.w;
-
-    // Quaternion to Euler transformation
-    tf2::fromMsg(pose_out_stamped.pose.orientation, q);
-    tf2::Matrix3x3(q).getRPY(
-      transformed_object_info.grasp_orientation_euler[0],
-      transformed_object_info.grasp_orientation_euler[1],
-      transformed_object_info.grasp_orientation_euler[2]);
-
-    RCLCPP_DEBUG(logger_, "Object %d pose:", index);
+    RCLCPP_DEBUG(logger_, "Object %d pose:", i+1);
     RCLCPP_DEBUG(logger_, "  Tranformed Pose x: %f", pose_out_stamped.pose.position.x);
     RCLCPP_DEBUG(logger_, "  Tranformed Pose y: %f", pose_out_stamped.pose.position.y);
     RCLCPP_DEBUG(logger_, "  Tranformed Pose z: %f", pose_out_stamped.pose.position.z);
@@ -108,11 +84,11 @@ bool TransformObjectPose::transform_pose(
     RCLCPP_DEBUG(logger_, "  Tranformed Quat w: %f", pose_out_stamped.pose.orientation.w);
 
     // Stack objects
-    transformed_objects.objects.push_back(transformed_object_info);
-    ++index;
+    transformed_perception_scene.objects[i].pose = pose_out_stamped.pose;
   }
 
-  setOutput("transformed_objects", transformed_objects);
+  setOutput("transformed_perception_scene", transformed_perception_scene);
+  RCLCPP_INFO(logger_, "Objects transformed.");
 
   return true;
 }

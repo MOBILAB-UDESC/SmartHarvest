@@ -1,15 +1,16 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_OBJECT_POSE_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__ACTION__COMMON__TRANSFORM_OBJECT_POSE_HPP_
 
+#include <memory>
+#include <string>
+
 #include "behaviortree_cpp/action_node.h"
-#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2_ros/buffer.hpp"
 #include "tf2_ros/transform_listener.hpp"
 
-#include "sh_interfaces/msg/detected_objects.hpp"
+#include "sh_interfaces/msg/perception_scene.hpp"
 
 namespace sh_behavior_tree
 {
@@ -42,10 +43,13 @@ public:
   static BT::PortsList providedPorts()
   {
     return{
-      BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
-      BT::InputPort<std::string>("transform_frame", "Frame to transform detected object poses into"),
-      BT::OutputPort<sh_interfaces::msg::DetectedObjects>(
-        "transformed_objects", "List of detected objects with poses transformed into a target frame")
+      BT::InputPort<sh_interfaces::msg::PerceptionScene>(
+        "perception_scene",
+        "Complete perception result containing detected objects, header, and processing metadata"),
+      BT::InputPort<std::string>("transformation_frame", "Frame to transform detected object poses into"),
+      BT::OutputPort<sh_interfaces::msg::PerceptionScene>(
+        "transformed_perception_scene",
+        "Complete perception result with detected object poses transformed into a target frame")
     };
   }
 
@@ -63,7 +67,7 @@ private:
    * @return true or false.
    */
   bool transform_pose(
-    const sh_interfaces::msg::DetectedObjects& objects,
+    const sh_interfaces::msg::PerceptionScene& perception_scene,
     const std::string& transform_frame);
 
   // ROS 2 node

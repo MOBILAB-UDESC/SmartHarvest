@@ -1,15 +1,14 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__DETECTION__GET_CAMERA_DATA_ACTION_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__ACTION__DETECTION__GET_CAMERA_DATA_ACTION_HPP_
 
-#include <mutex>
+#include <memory>
+#include <string>
 
-#include "behaviortree_cpp/action_node.h"
-#include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
-#include "sh_bt_base_template/bt_syn_subscription_node.hpp"
+#include "sh_base_template/bt_syn_subscription_node.hpp"
 
 namespace sh_behavior_tree
 {
@@ -22,7 +21,7 @@ using CameraInfoMsg = sensor_msgs::msg::CameraInfo;
  * @class sh_behavior_tree::GetCameraDataAction
  * @brief BehaviorTree Action Node that synchronously acquires RGB-D data.
  */
-class GetCameraDataAction : public sh_bt_base_template::BTSyncSubscriptionNode<
+class GetCameraDataAction : public sh_base_template::BTSyncSubscriptionNode<
   rclcpp_lifecycle::LifecycleNode, ImageMsg, ImageMsg, CameraInfoMsg>
 {
 public:

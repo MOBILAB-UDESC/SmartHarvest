@@ -1,29 +1,33 @@
-#include "sh_behavior_tree/plugins/action/detection/predict_action.hpp"
+#include "sh_behavior_tree/plugins/action/detection/predict_service.hpp"
+
+#include "sh_interfaces/msg/perception_scene.hpp"
 
 namespace sh_behavior_tree
 {
 
-PredictAction::PredictAction(
+PredictService::PredictService(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTServiceNode<
-      rclcpp_lifecycle::LifecycleNode, DetectObjectsSrv>(action_name, node_config)
+    sh_base_template::BTServiceNode<
+      rclcpp_lifecycle::LifecycleNode, RunPerceptionSrv>(action_name, node_config)
 {}
 
-PredictAction::~PredictAction()
+PredictService::~PredictService()
 {}
 
-BT::PortsList PredictAction::providedPorts()
+BT::PortsList PredictService::providedPorts()
 {
   return providedBasicPorts({
     BT::InputPort<ImageMsg::ConstSharedPtr>("rgb_image"),
     BT::InputPort<ImageMsg::ConstSharedPtr>("depth_image"),
     BT::InputPort<CameraInfoMsg::ConstSharedPtr>("cam_info"),
-    BT::OutputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects")
+    BT::OutputPort<sh_interfaces::msg::PerceptionScene>(
+      "perception_scene",
+      "Complete perception result containing detected objects, header, and processing metadata")
   });
 }
 
-bool PredictAction::send_request(std::shared_ptr<DetectObjectsSrv::Request>& request)
+bool PredictService::send_request(std::shared_ptr<RunPerceptionSrv::Request>& request)
 {
   ImageMsg::ConstSharedPtr rgb_image;
   ImageMsg::ConstSharedPtr depth_image;
@@ -44,23 +48,28 @@ bool PredictAction::send_request(std::shared_ptr<DetectObjectsSrv::Request>& req
 
   RCLCPP_INFO(logger_, "Sending a request.");
 
-  request->rgb_image = *rgb_image;
-  request->depth_image = *depth_image;
-  request->cam_info = *cam_info;
+  request->input.rgb_images.resize(1);
+  request->input.depth_images.resize(1);
+  request->input.camera_infos.resize(1);
+
+  request->input.rgb_images[0] = *rgb_image;
+  request->input.depth_images[0] = *depth_image;
+  request->input.camera_infos[0] = *cam_info;
 
   return true;
 }
 
-BT::NodeStatus PredictAction::onTick(
-  const std::shared_ptr<DetectObjectsSrv::Response>& response)
+BT::NodeStatus PredictService::onTick(
+  const std::shared_ptr<RunPerceptionSrv::Response>& response)
 {
   if (!response->success) {
     RCLCPP_WARN(logger_, "Might be a problem with the server.");
     return BT::NodeStatus::FAILURE;
   }
 
-  setOutput("objects", response->detected_objects);
-  RCLCPP_INFO(logger_, "Response messages received");
+  setOutput("perception_scene", response->scene);
+
+  RCLCPP_INFO(logger_, "Response messages received in %.3f", response->scene.processing_time_ms);
   return BT::NodeStatus::SUCCESS;
 }
 
@@ -72,8 +81,8 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<sh_behavior_tree::PredictAction>(name, config);
+      return std::make_unique<sh_behavior_tree::PredictService>(name, config);
     };
 
-  factory.registerBuilder<sh_behavior_tree::PredictAction>("PredictAction", builder);
+  factory.registerBuilder<sh_behavior_tree::PredictService>("PredictService", builder);
 }
