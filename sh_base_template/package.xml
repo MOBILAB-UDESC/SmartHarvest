@@ -3,16 +3,23 @@
 <package format="3">
   <name>sh_base_template</name>
   <version>1.0.0</version>
-  <description>Abstract behaviortree_cpp base nodes for ROS 2.</description>
+  <description>
+    Abstract base nodes and reusable templates for BehaviorTree.CPP integration
+    in ROS 2 (action, service, and subscriber), as well as plugin base templates
+    for perception pipelines.
+  </description>
   <maintainer email="nilton.csv18@edu.udesc.br">nilton</maintainer>
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>behaviortree_cpp</depend>
+  <depend>cv_bridge</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
+  <depend>sensor_msgs</depend>
+
   <depend>sh_interfaces</depend>
 
   <test_depend>ament_lint_auto</test_depend>

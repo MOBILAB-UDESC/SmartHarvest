@@ -1,26 +1,19 @@
 #ifndef SH_BASE_TEMPLATE__DETECTOR_BASE_HPP_
 #define SH_BASE_TEMPLATE__DETECTOR_BASE_HPP_
 
-#include "opencv2/opencv.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_interfaces/msg/detection2_d.hpp"
+#include "sh_base_template/types/perception_types.hpp"
 
 namespace sh_base_template
 {
 
-struct DetectorBaseConfig
-{
-  std::string model_path;
-  std::vector<int64_t> input_size;
-  bool use_gpu;
-  bool inference_verbose;
-};
-
 /**
  * @class sh_base_template::DetectorBase
+ * @brief Abstract interface for detector plugins.
  *
- * @brief Abstract interface for 2D object detector plugins.
+ * A detector performs object detection or segmentation using perception
+ * input data such as RGB images, depth images, or point clouds.
  */
 class DetectorBase
 {
@@ -29,11 +22,7 @@ public:
   virtual ~DetectorBase() = default;
 
   /**
-   * @brief Configures and initializes the detector.
-   *
-   * @param node Weak pointer to parent node.
-   *
-   * @return bool Configuration state.
+   * @brief Configure transition.
    */
   virtual bool configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr& /*node*/)
@@ -41,33 +30,34 @@ public:
     return true;
   }
 
-  virtual void cleanup()
-  {}
+  /**
+   * @brief Activate transition.
+   */
+  virtual void activate() {};
 
   /**
-   * @brief Implementation of detection inference
+   * @brief Deactivate transition.
+   */
+  virtual void deactivate() {};
+
+  /**
+   * @brief Cleanup transition.
+   */
+  virtual void cleanup() {};
+
+
+  /**
+   * @brief Executes model inference.
    *
-   * @param input CV input image.
-   * @param detector_base_config Default params struct.
-   * @param detections Output vector containing all detected objects.
-   * The vector should be populated by the implementation.
-   *
-   * @return bool Detection state.
+   * Custom implementations must populate the detection output structure
+   * with inference results.
+   * @param detector_input Input data for the detector.
+   * @param detector_output DetectorOutput to be populated with detection results.
+   * @return true or false.
    */
   virtual bool detect(
-    const cv::Mat& input,
-    const DetectorBaseConfig& detector_base_config,
-    std::vector<sh_interfaces::msg::Detection2D>& detections) = 0;
-
-protected:
-  /**
-   * @brief Optional warmup routine.
-   */
-  virtual bool warmup(const cv::Mat& /*dummy_input*/)
-  {
-    return true;
-  }
-
+    const sh_base_template::types::DetectorInput& detector_input,
+    sh_base_template::types::DetectorOutput& detector_output) = 0;
 };
 
 }  // namespace sh_base_template

@@ -1,11 +1,9 @@
 #ifndef SH_BASE_TEMPLATE__LOCALISER_BASE_HPP_
 #define SH_BASE_TEMPLATE__LOCALISER_BASE_HPP_
 
-#include "geometry_msgs/msg/pose.hpp"
-#include "opencv2/opencv.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_interfaces/msg/detection2_d.hpp"
+#include "sh_base_template/types/perception_types.hpp"
 
 namespace sh_base_template
 {
@@ -13,7 +11,9 @@ namespace sh_base_template
 /**
  * @class sh_base_template::LocaliserBase
  *
- * @brief Abstract interface for 2D object detector plugins.
+ * @brief Abstract interface for localiser plugins.
+ *
+ * A localiser estimates 3D object position from perception data and outputs.
  */
 class LocaliserBase
 {
@@ -22,11 +22,7 @@ public:
   virtual ~LocaliserBase() = default;
 
   /**
-   * @brief Configures and initializes the detector.
-   *
-   * @param node Weak pointer to parent node.
-   *
-   * @return bool Configuration state.
+   * @brief Configure transition.
    */
   virtual bool configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr& /*node*/)
@@ -34,28 +30,33 @@ public:
     return true;
   }
 
-  virtual void cleanup()
-  {}
+  /**
+   * @brief Activate transition.
+   */
+  virtual void activate() {};
 
   /**
-   * @brief Implementation of 3D pose estimation
+   * @brief Deactivate transition.
+   */
+  virtual void deactivate() {};
+
+  /**
+   * @brief Cleanup transition.
+   */
+  virtual void cleanup() {};
+
+  /**
+   * @brief 3D pose estimation.
    *
-   * @param depth_input CV depth image.
-   * @param cam_intrinsics Camera intrinsics matrix (array).
-   * @param detections Detected objects list.
-   * @param poses Poses list to populate.
-   *
+   * Custom implementations must populate the localisation output with
+   * valid estimated poses
+   * @param localiser_input Input data for localisation.
+   * @param localiser_output Output populated with valid estimated object poses.
    * @return bool Localisation state.
    */
   virtual bool localise(
-    const cv::Mat& depth_input,
-    const std::string& depth_encoding,
-    const std::array<double, 4UL>& cam_intrinsics,
-    const std::vector<sh_interfaces::msg::Detection2D>& detections,
-    std::vector<geometry_msgs::msg::Pose>& poses) = 0;
-
-protected:
-
+    const sh_base_template::types::LocaliserInput& localiser_input,
+    sh_base_template::types::LocaliserOutput& localiser_output) = 0;
 };
 
 }  // namespace sh_base_template

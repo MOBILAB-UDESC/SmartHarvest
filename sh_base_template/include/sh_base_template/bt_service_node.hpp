@@ -1,6 +1,10 @@
 #ifndef SH_BASE_TEMPLATE__BT_SERVICE_NODE_HPP_
 #define SH_BASE_TEMPLATE__BT_SERVICE_NODE_HPP_
 
+#include <memory>
+#include <mutex>
+#include <string>
+
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
 

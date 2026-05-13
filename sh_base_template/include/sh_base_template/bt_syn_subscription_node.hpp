@@ -2,6 +2,9 @@
 #define SH_BASE_TEMPLATE__BT_SUBSCRIPTION_NODE_HPP_
 
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
 #include <tuple>
 #include <utility>
 

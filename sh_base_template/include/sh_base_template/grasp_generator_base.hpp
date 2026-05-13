@@ -1,8 +1,11 @@
 #ifndef SH_BASE_TEMPLATE__GRASP_GENERATOR_BASE_HPP_
 #define SH_BASE_TEMPLATE__GRASP_GENERATOR_BASE_HPP_
 
-#include "geometry_msgs/msg/pose.hpp"
+#include <vector>
+
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
+
+#include "sh_base_template/types/perception_types.hpp"
 
 namespace sh_base_template
 {
@@ -10,7 +13,10 @@ namespace sh_base_template
 /**
  * @class sh_base_template::GraspGeneratorBase
  *
- * @brief Abstract interface for 2D object detector plugins.
+ * @brief Abstract interface for grasp generator plugins.
+ *
+ * A grasp generator computes grasp orientations for detected
+ * objects based on perception results and scene information.
  */
 class GraspGeneratorBase
 {
@@ -19,11 +25,7 @@ public:
   virtual ~GraspGeneratorBase() = default;
 
   /**
-   * @brief Configures and initializes the detector.
-   *
-   * @param node Weak pointer to parent node.
-   *
-   * @return bool Configuration state.
+   * @brief Configure transition.
    */
   virtual bool configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr& /*node*/)
@@ -31,21 +33,34 @@ public:
     return true;
   }
 
-  virtual void cleanup()
-  {}
+  /**
+   * @brief Activate transition.
+   */
+  virtual void activate() {};
 
   /**
-   * @brief Implementation of grasping orientation
+   * @brief Deactivate transition.
+   */
+  virtual void deactivate() {};
+
+  /**
+   * @brief Cleanup transition.
+   */
+  virtual void cleanup() {};
+
+  /**
+   * @brief Generate grasp orientations.
    *
-   * @param poses Poses list to populate with quaternion.
+   * Custom implementations must update the provided pose list with
+   * grasp-related orientation
    *
-   * @return bool Grasping Calculation state.
+   * @param frame Perception frame containing scene information.
+   * @param poses List of poses to populate or update with grasp orientation.
+   * @return true or false.
    */
   virtual bool generate_grasp(
-    std::vector<geometry_msgs::msg::Pose>& poses) = 0;
-
-protected:
-
+    const sh_base_template::types::PerceptionFrame& frame,
+    std::vector<sh_base_template::types::PoseFeatures>& poses) = 0;
 };
 
 }  // namespace sh_base_template
