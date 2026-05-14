@@ -8,45 +8,45 @@
       <Sequence name="MainSequence">
 
         <!-- Scan from distance -->
-        <RetryUntilSuccessful num_attempts="4">
+        <!-- <RetryUntilSuccessful num_attempts="4">
           <Fallback name="ScanFromDistanceFallback">
             <SubTree ID="DetectionTreeBase"
               topic_names="{camera_default_topics}"
               sync_timeout="{default_sync_timeout}"
               service_name="{detection_service_name}"
               service_response_timeout="{default_service_response_timeout}"
-              _autoremap="true" />
+              _autoremap="true" /> -->
             <!-- When no apple is found, rotate the base (PI/2 rad) -->
-            <ForceFailure>
+            <!-- <ForceFailure>
               <Sequence>
                 <RotateRobot
                   topic_name="odometry/filtered" sub_timeout="{default_sub_timeout}"
-                    max_w="0.8" angle_rad="1.67" angle_tolerance="0.1" kp="0.75" />
+                    max_w="0.8" angle_rad="1.67" angle_tolerance="0.1" kp="0.75" /> -->
                 <!-- Waits for the robot to stop moving -->
-                <Sleep msec="100"/>
+                <!-- <Sleep msec="100"/>
               </Sequence>
             </ForceFailure>
           </Fallback>
-        </RetryUntilSuccessful>
+        </RetryUntilSuccessful> -->
 
         <!-- Approach Sequence -->
-        <TransformObjectPose
+        <!-- <TransformObjectPose
           transform_frame="base_link" objects="{objects}"
           transformed_objects="{objects_to_map}" />
 
         <GetNearestObjectPose
-          objects="{objects_to_map}" safety_dist="0.12"
+          objects="{objects_to_map}" safety_dist="0.05"
           nearest_object="{nearest_object}" />
 
         <MoveBaseAction
           action_name="navigate_to_pose" action_response_timeout="{default_action_response_timeout}"
-          goal_pose="{nearest_object}" />
+          goal_pose="{nearest_object}" /> -->
 
         <!-- Pick and Place Sequence -->
-        <MoveArmToNamedTargetAction name="MoveToHomeAction"
+        <!-- <MoveArmToNamedTargetAction name="MoveToHomeAction"
           action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
             group_name="arm" named_target="pick"
-          error_code="{error_code}" />
+          error_code="{error_code}" /> -->
 
         <SubTree ID="DetectionTreeArm"
           topic_names="arm_camera_1/rgb/image;arm_camera_1/depth/image;arm_camera_1/rgb/camera_info"
@@ -55,25 +55,22 @@
           service_response_timeout="{default_service_response_timeout}"
           _autoremap="true" />
 
-        <!-- Update Grasp Orientation -->
-        <ComputeGraspOrientation objects="{objects}" />
-
         <!-- Transform objects poses into a static frame -->
         <TransformObjectPose
-          transform_frame="base_link" objects="{objects}"
-          transformed_objects="{objects}" />
+          transformation_frame="base_link" perception_scene="{perception_scene}"
+          transformed_perception_scene="{perception_scene}" />
 
         <!-- Setting up the planning scene -->
         <ClearPlanningSceneService
           service_name="{clear_scene_service_name}" service_response_timeout="{default_service_response_timeout}" />
         <UpdateSceneFromPosesService
           service_name="{update_scene_service_name}" service_response_timeout="{default_service_response_timeout}"
-            objects="{objects}" />
+            perception_scene="{perception_scene}" />
 
-        <MoveGripperAction
+        <!-- <MoveGripperAction
           action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
             group_name="gripper" named_target="open"
-          error_code="{error_code}" />
+          error_code="{error_code}" /> -->
 
         <!-- Store variables into the blackboard -->
         <Script code=" n_objects := total_objects " />
@@ -81,10 +78,10 @@
         <Script code=" n_collected_objects := 0 " />
 
         <!-- Pick/Skip all detected apples -->
-        <RetryUntilSuccessful name="PickLoop" num_attempts="{total_objects}">
+        <!-- <RetryUntilSuccessful name="PickLoop" num_attempts="1">
           <SubTree ID="MoveTree"
             _autoremap="true" />
-        </RetryUntilSuccessful>
+        </RetryUntilSuccessful> -->
 
       </Sequence>
     </RetryUntilSuccessful>
@@ -96,12 +93,12 @@
       <GetCameraDataAction name="GetCameraDataAction_Base"
         topic_names="{topic_names}" sync_timeout="{sync_timeout}"
         rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}" />
-      <PredictAction name="PredictAction_Base"
+      <PredictService name="PredictService_Base"
         service_name="{service_name}" service_response_timeout="{service_response_timeout}"
           rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
-        objects="{objects}" />
+        perception_scene="{perception_scene}" />
       <AreObjectsFoundCondition name="AreObjectsFoundCondition_Base"
-        objects="{objects}"
+        perception_scene="{perception_scene}"
         total_objects="{total_objects}" />
     </Sequence>
   </BehaviorTree>
@@ -109,14 +106,14 @@
   <BehaviorTree ID="DetectionTreeArm">
     <Sequence name="DetectionSequenceArm">
       <GetCameraDataAction name="GetCameraDataAction_Arm"
-        topic_names="{topic_names}" sync_timeout="0.5"
+        topic_names="{topic_names}" sync_timeout="{sync_timeout}"
         rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}" />
-      <PredictAction name="PredictAction_Arm"
+      <PredictService name="PredictService_Arm"
         service_name="{service_name}" service_response_timeout="{service_response_timeout}"
           rgb_image="{rgb}" depth_image="{depth}" cam_info="{info}"
-        objects="{objects}" />
+        perception_scene="{perception_scene}" />
       <AreObjectsFoundCondition name="AreObjectsFoundCondition_Arm"
-        objects="{objects}"
+        perception_scene="{perception_scene}"
         total_objects="{total_objects}" />
     </Sequence>
   </BehaviorTree>
@@ -132,7 +129,7 @@
             action_name="{move_to_object_action_name}" action_response_timeout="{default_action_response_timeout}"
               group_name="arm" object_name="{object_name}"
             error_code="{error_code}" />
-          <MoveGripperAction name="AttachObjectAction"
+          <!-- <MoveGripperAction name="AttachObjectAction"
             action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
               group_name="gripper" named_target="half-close"
               attach="1" detach="0" object_to_attach_detach="{object_name}" link_to_attach_detach="arm_gripper_base_link"
@@ -146,6 +143,10 @@
               group_name="gripper" named_target="open"
               attach="0" detach="1" object_to_attach_detach="{object_name}"
             error_code="{error_code}" />
+          <MoveArmToNamedTargetAction name="MoveToHomeAction"
+            action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+              group_name="arm" named_target="pick"
+            error_code="{error_code}" /> -->
         </Sequence>
       </ForceSuccess>
       <CheckErrorIds

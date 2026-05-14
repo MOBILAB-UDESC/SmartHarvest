@@ -1,12 +1,14 @@
 #include "sh_behavior_tree/plugins/action/pick_and_place/update_scene_from_poses_service.hpp"
 
+#include "sh_interfaces/msg/perception_scene.hpp"
+
 namespace sh_behavior_tree
 {
 
 UpdateSceneFromPosesService::UpdateSceneFromPosesService(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTServiceNode<
+    sh_base_template::BTServiceNode<
       rclcpp_lifecycle::LifecycleNode, UpdatePlanningSceneFromPosesSrv>(action_name, node_config)
 {}
 
@@ -16,19 +18,21 @@ UpdateSceneFromPosesService::~UpdateSceneFromPosesService()
 BT::PortsList UpdateSceneFromPosesService::providedPorts()
 {
   return providedBasicPorts({
-    BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects")
+    BT::InputPort<sh_interfaces::msg::PerceptionScene>(
+      "perception_scene",
+      "Complete perception result containing detected objects, header, and processing metadata")
   });
 }
 
 bool UpdateSceneFromPosesService::send_request(
   std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request>& request)
 {
-  if (!getInput("objects", request->detected_objects)) {
-    RCLCPP_ERROR(logger_, "Missing input 'detected_objects'.");
+  if (!getInput("perception_scene", request->perception_scene)) {
+    RCLCPP_ERROR(logger_, "Missing input 'perception_scene'.");
     return false;
   }
 
-  RCLCPP_INFO(logger_, "Sending request with %d objects.", request->detected_objects.num_objects);
+  RCLCPP_INFO(logger_, "Sending request with %ld objects.", request->perception_scene.objects.size());
   return true;
 }
 

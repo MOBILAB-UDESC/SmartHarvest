@@ -1,10 +1,12 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_SERVICE_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__CLEAR_PLANNING_SCENE_SERVICE_HPP_
 
-#include "rclcpp/rclcpp.hpp"
+#include <string>
+#include <memory>
+
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_bt_base_template/bt_service_node.hpp"
+#include "sh_base_template/bt_service_node.hpp"
 #include "sh_interfaces/srv/clear_planning_scene.hpp"
 
 namespace sh_behavior_tree
@@ -17,7 +19,7 @@ using ClearPlanningSceneSrv = sh_interfaces::srv::ClearPlanningScene;
  * @brief BehaviorTree Action Node that clears MoveIt 2 planning scene.
  */
 class ClearPlanningSceneService :
-  public sh_bt_base_template::BTServiceNode<rclcpp_lifecycle::LifecycleNode, ClearPlanningSceneSrv>
+  public sh_base_template::BTServiceNode<rclcpp_lifecycle::LifecycleNode, ClearPlanningSceneSrv>
 {
 public:
   /**

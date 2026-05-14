@@ -1,10 +1,12 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_SERVICE_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__ACTION__PICK_AND_PLACE__UPDATE_SCENE_FROM_POSES_SERVICE_HPP_
 
-#include "rclcpp/rclcpp.hpp"
+#include <string>
+#include <memory>
+
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_bt_base_template/bt_service_node.hpp"
+#include "sh_base_template/bt_service_node.hpp"
 #include "sh_interfaces/srv/update_planning_scene_from_poses.hpp"
 
 namespace sh_behavior_tree
@@ -17,7 +19,7 @@ using UpdatePlanningSceneFromPosesSrv = sh_interfaces::srv::UpdatePlanningSceneF
  * @brief BehaviorTree Action Node that adds detected objects into the MoveIt 2 planning scene.
  */
 class UpdateSceneFromPosesService :
-  public sh_bt_base_template::BTServiceNode<
+  public sh_base_template::BTServiceNode<
     rclcpp_lifecycle::LifecycleNode, UpdatePlanningSceneFromPosesSrv>
 {
 public:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(sh_moveit_planning_scene_server)
+project(sh_planning_scene_handler)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -18,7 +18,7 @@ include_directories(
 add_executable(
   ${PROJECT_NAME}
   src/main.cpp
-  src/planning_scene_server.cpp
+  src/planning_scene_handler.cpp
   src/planning_scene_utils.cpp
 )
 

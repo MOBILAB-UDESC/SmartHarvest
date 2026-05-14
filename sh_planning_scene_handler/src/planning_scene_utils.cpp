@@ -1,6 +1,6 @@
-#include "sh_moveit_planning_scene_server/planning_scene_utils.hpp"
+#include "sh_planning_scene_handler/planning_scene_utils.hpp"
 
-namespace sh_moveit_planning_scene_server
+namespace sh_planning_scene_handler
 {
 
 uint8_t get_primitive(const std::string& shape)
@@ -25,8 +25,7 @@ void add_single_object_to_the_scene(
   const std::string& object_frame_id,
   const uint8_t& object_shape,
   const std::vector<double>& object_size,
-  const std::vector<double>& object_position,
-  const std::vector<double>& object_grasp_orientation)
+  const geometry_msgs::msg::Pose& pose)
 {
   collision_object.id = object_name;
   collision_object.header.frame_id = object_frame_id;
@@ -37,15 +36,9 @@ void add_single_object_to_the_scene(
   collision_object.primitives[0].dimensions.assign(object_size.begin(), object_size.end());
 
   collision_object.primitive_poses.resize(1);
-  collision_object.primitive_poses[0].position.x = object_position[0];
-  collision_object.primitive_poses[0].position.y = object_position[1];
-  collision_object.primitive_poses[0].position.z = object_position[2];
-  collision_object.primitive_poses[0].orientation.x = object_grasp_orientation[0];
-  collision_object.primitive_poses[0].orientation.y = object_grasp_orientation[1];
-  collision_object.primitive_poses[0].orientation.z = object_grasp_orientation[2];
-  collision_object.primitive_poses[0].orientation.w = object_grasp_orientation[3];
+  collision_object.primitive_poses[0] = pose;
 
   collision_object.operation = moveit_msgs::msg::CollisionObject::ADD;
 }
 
-}  // namespace sh_moveit_planning_scene_server
+}  // namespace sh_planning_scene_handler

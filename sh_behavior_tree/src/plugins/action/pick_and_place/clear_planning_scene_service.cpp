@@ -6,7 +6,7 @@ namespace sh_behavior_tree
 ClearPlanningSceneService::ClearPlanningSceneService(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTServiceNode<
+    sh_base_template::BTServiceNode<
       rclcpp_lifecycle::LifecycleNode, ClearPlanningSceneSrv>(action_name, node_config)
 {}
 

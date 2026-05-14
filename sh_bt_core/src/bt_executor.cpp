@@ -43,6 +43,9 @@ CallbackReturn BTExecutor::on_activate(const rclcpp_lifecycle::State& state)
   (void) state;
   RCLCPP_INFO(logger_, "Activating.");
 
+  groot_publisher_ =
+    std::make_unique<BT::Groot2Publisher>(tree_, 5555);
+
   tick_service_ = this->create_service<sh_interfaces::srv::TickTree>("tick",
     std::bind(
       &BTExecutor::tick_callback,

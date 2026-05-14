@@ -1,9 +1,15 @@
-#include "sh_moveit_planning_scene_server/planning_scene_server.hpp"
+#include "sh_planning_scene_handler/planning_scene_handler.hpp"
 
-namespace sh_moveit_planning_scene_server
+#include "geometry_msgs/msg/pose.hpp"
+#include "moveit_msgs/msg/attached_collision_object.hpp"
+#include "moveit_msgs/msg/collision_object.hpp"
+
+#include "sh_planning_scene_handler/planning_scene_utils.hpp"
+
+namespace sh_planning_scene_handler
 {
 
-PlanningSceneServer::PlanningSceneServer(const std::string& server_name) :
+PlanningSceneHandler::PlanningSceneHandler(const std::string& server_name) :
   rclcpp::Node(server_name),
   logger_(rclcpp::get_logger(server_name))
 {
@@ -15,7 +21,7 @@ PlanningSceneServer::PlanningSceneServer(const std::string& server_name) :
   clear_service_ = this->create_service<ClearPlanningSceneSrv>(
     get_parameter("clear_scene_service_name").as_string(),
     std::bind(
-      &PlanningSceneServer::clear_service_callback,
+      &PlanningSceneHandler::clear_service_callback,
       this,
       std::placeholders::_1,
       std::placeholders::_2));
@@ -23,7 +29,7 @@ PlanningSceneServer::PlanningSceneServer(const std::string& server_name) :
   update_from_pose_service_ = this->create_service<UpdatePlanningSceneFromPosesSrv>(
     get_parameter("update_scene_service_name").as_string(),
     std::bind(
-      &PlanningSceneServer::update_from_pose_service_callback,
+      &PlanningSceneHandler::update_from_pose_service_callback,
       this,
       std::placeholders::_1,
       std::placeholders::_2));
@@ -31,10 +37,10 @@ PlanningSceneServer::PlanningSceneServer(const std::string& server_name) :
   RCLCPP_INFO(logger_, "Created.");
 }
 
-PlanningSceneServer::~PlanningSceneServer()
+PlanningSceneHandler::~PlanningSceneHandler()
 {}
 
-void PlanningSceneServer::declare_parameters()
+void PlanningSceneHandler::declare_parameters()
 {
   declare_parameter("clear_scene_service_name", rclcpp::ParameterValue("clear_scene"));
   declare_parameter("update_scene_service_name", rclcpp::ParameterValue("update_from_pose_scene"));
@@ -47,7 +53,7 @@ void PlanningSceneServer::declare_parameters()
   declare_parameter("target_dimension", rclcpp::ParameterValue(std::vector<double>({0.03})));
 }
 
-void PlanningSceneServer::clear_service_callback(
+void PlanningSceneHandler::clear_service_callback(
   const std::shared_ptr<ClearPlanningSceneSrv::Request> /*request*/,
   std::shared_ptr<ClearPlanningSceneSrv::Response> response)
 {
@@ -74,13 +80,13 @@ void PlanningSceneServer::clear_service_callback(
   response->message = std::to_string(objects_size) + " objects removed from the scene";
 }
 
-void PlanningSceneServer::update_from_pose_service_callback(
+void PlanningSceneHandler::update_from_pose_service_callback(
   const std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request> request,
   std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Response> response)
 {
-  const auto objects_size = request->detected_objects.num_objects;
-  const auto objects = request->detected_objects.objects;
-  const auto frame_id = request->detected_objects.header.frame_id;
+  const auto objects_size = request->perception_scene.objects.size();
+  const auto objects = request->perception_scene.objects;
+  const auto frame_id = request->perception_scene.header.frame_id;
 
   if (!objects_size) {
     response->success = false;
@@ -92,29 +98,30 @@ void PlanningSceneServer::update_from_pose_service_callback(
   collision_objects.resize(objects_size+1);
 
   // Ground plane
+  auto ground_plane_position = get_parameter("ground_plane_position").as_double_array();
+  geometry_msgs::msg::Pose ground_pose;
+  ground_pose.position.x = ground_plane_position[0];
+  ground_pose.position.y = ground_plane_position[1];
+  ground_pose.position.z = ground_plane_position[2];
+  ground_pose.orientation.w = 1;
   add_single_object_to_the_scene(
     collision_objects[0],
     "ground_plane",
     get_parameter("ground_plane_link").as_string(),
     shape_msgs::msg::SolidPrimitive::BOX,
     get_parameter("ground_plane_dimension").as_double_array(),
-    get_parameter("ground_plane_position").as_double_array(),
-    {0.0, 0.0, 0.0, 1.0});
+    ground_pose);
 
   // Objects
   size_t index = 1;
   for (const auto& object: objects) {
     add_single_object_to_the_scene(
       collision_objects[index],
-      "Apple_"+std::to_string(index),
+      object.class_name+"_"+std::to_string(index),
       frame_id,
       target_primitive_,
       get_parameter("target_dimension").as_double_array(),
-      {object.x, object.y, object.z},
-      {object.grasp_orientation_quaternion[0],
-        object.grasp_orientation_quaternion[1],
-        object.grasp_orientation_quaternion[2],
-        object.grasp_orientation_quaternion[3]});
+      object.pose);
     ++index;
   }
 
@@ -124,4 +131,4 @@ void PlanningSceneServer::update_from_pose_service_callback(
   response->message = std::to_string(objects_size) + " objects added into the scene.";
 }
 
-}  // namespace sh_moveit_planning_scene_server
+}  // namespace sh_planning_scene_handler

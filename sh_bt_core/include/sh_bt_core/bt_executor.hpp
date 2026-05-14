@@ -4,6 +4,7 @@
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/blackboard.h"
+#include "behaviortree_cpp/loggers/groot2_publisher.h"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
 #include "sh_bt_core/bt_node_loader.hpp"
@@ -97,6 +98,8 @@ private:
 
   rclcpp::Logger logger_; // Ros 2 node logger
   rclcpp::Service<sh_interfaces::srv::TickTree>::SharedPtr tick_service_; // ROS 2 service
+
+  std::unique_ptr<BT::Groot2Publisher> groot_publisher_;
 
   BT::Tree tree_;
 };

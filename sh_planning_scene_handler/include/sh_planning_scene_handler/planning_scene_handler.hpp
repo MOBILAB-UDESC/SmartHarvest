@@ -1,26 +1,27 @@
-#ifndef SH_MOVEIT_PLANNING_SCENE_SERVER__PLANNING_SCENE_SERVER_HPP_
-#define SH_MOVEIT_PLANNING_SCENE_SERVER__PLANNING_SCENE_SERVER_HPP_
+#ifndef SH_PLANNING_SCENE_HANDLER__PLANNING_SCENE_HANDLER_HPP_
+#define SH_PLANNING_SCENE_HANDLER__PLANNING_SCENE_HANDLER_HPP_
+
+#include <memory>
+#include <string>
 
 #include "moveit/planning_scene_interface/planning_scene_interface.hpp"
-#include "moveit_msgs/msg/collision_object.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "sh_interfaces/srv/clear_planning_scene.hpp"
 #include "sh_interfaces/srv/update_planning_scene_from_poses.hpp"
-#include "sh_moveit_planning_scene_server/planning_scene_utils.hpp"
 
-namespace sh_moveit_planning_scene_server
+namespace sh_planning_scene_handler
 {
 
 using ClearPlanningSceneSrv = sh_interfaces::srv::ClearPlanningScene;
 using UpdatePlanningSceneFromPosesSrv = sh_interfaces::srv::UpdatePlanningSceneFromPoses;
 
-class PlanningSceneServer : public rclcpp::Node
+class PlanningSceneHandler : public rclcpp::Node
 {
 public:
-  explicit PlanningSceneServer(const std::string& server_name);
+  explicit PlanningSceneHandler(const std::string& server_name);
 
-  ~PlanningSceneServer();
+  ~PlanningSceneHandler();
 
 private:
 
@@ -42,6 +43,6 @@ private:
   uint8_t target_primitive_;
 };
 
-}  // namespace sh_moveit_planning_scene_server
+}  // namespace sh_planning_scene_handler
 
-#endif  // SH_MOVEIT_PLANNING_SCENE_SERVER__PLANNING_SCENE_SERVER_HPP_
+#endif  // SH_PLANNING_SCENE_HANDLER__PLANNING_SCENE_HANDLER_HPP_
