@@ -5,5 +5,5 @@ sensor_msgs/Image input
 ---
 bool success # Wheter any object was detected
 
-uint8 num_objects
+int32 num_objects
 sh_interfaces/Detection2D[] detections

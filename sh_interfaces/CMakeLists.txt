@@ -13,13 +13,20 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 set(msg_files
+  "msg/Detection2D.msg"
+  "msg/DetectedObjects.msg"
   "msg/ErrorCodes.msg"
+  "msg/ObjectInstance.msg"
+  "msg/PerceptionInput.msg"
+  "msg/PerceptionScene.msg"
   "msg/SingleObjectInfo.msg"
-  "msg/DetectedObjects.msg")
+  "msg/YoloConfig.msg")
 
 set(srv_files
   "srv/DetectObjects.srv"
   "srv/ClearPlanningScene.srv"
+  "srv/RunPerception.srv"
+  "srv/RunYoloDetection.srv"
   "srv/UpdatePlanningSceneFromPoses.srv"
   "srv/TickTree.srv")
 

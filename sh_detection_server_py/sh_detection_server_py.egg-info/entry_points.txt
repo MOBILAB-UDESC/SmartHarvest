@@ -1,2 +1,0 @@
-[console_scripts]
-sh_detection_server_py = sh_detection_server_py.detection_server:main

@@ -2,7 +2,6 @@
 
 #include "sh_perception_server/perception_server.hpp"
 
-
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);

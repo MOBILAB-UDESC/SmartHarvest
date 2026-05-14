@@ -1,10 +1,10 @@
 #ifndef SH_BEHAVIOR_TREE__PLUGINS__CONDITION__DETECTION__ARE_OBJECTS_FOUND_CONDITION_HPP_
 #define SH_BEHAVIOR_TREE__PLUGINS__CONDITION__DETECTION__ARE_OBJECTS_FOUND_CONDITION_HPP_
 
+#include <string>
+
 #include "behaviortree_cpp/condition_node.h"
 #include "rclcpp/rclcpp.hpp"
-
-#include "sh_interfaces/msg/detected_objects.hpp"
 
 namespace sh_behavior_tree
 {

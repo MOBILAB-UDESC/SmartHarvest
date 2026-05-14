@@ -6,13 +6,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(ament_index_cpp REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(OpenCV REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+
 find_package(sh_base_template REQUIRED)
 find_package(sh_interfaces REQUIRED)
 
@@ -27,14 +24,11 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(
   ${PROJECT_NAME}
-  ament_index_cpp::ament_index_cpp
   pluginlib::pluginlib
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
-  ${cv_bridge_TARGETS}
-  ${OpenCV_LIBS}
-  ${sh_interfaces_TARGETS}
   ${sh_base_template_TARGETS}
+  ${sh_interfaces_TARGETS}
 )
 
 install(
@@ -43,7 +37,7 @@ install(
 )
 
 install(DIRECTORY include/
-  DESTINATION include/
+  DESTINATION include/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

@@ -26,10 +26,10 @@ def generate_launch_description():
 
     sh_bringup_pkg = get_package_share_directory('sh_bringup')
 
-    sh_detection_server = LifecycleNode(
-        package='sh_detection_server_py',
-        executable='sh_detection_server_py',
-        name='sh_detection_server',
+    sh_perception_server = LifecycleNode(
+        package='sh_perception_server',
+        executable='sh_perception_server',
+        name='sh_perception_server',
         output='screen',
         namespace='',
         parameters=[
@@ -40,20 +40,20 @@ def generate_launch_description():
 
     configure_event_handler = EmitEvent(
         event=ChangeState(
-            lifecycle_node_matcher=matches_action(sh_detection_server),
+            lifecycle_node_matcher=matches_action(sh_perception_server),
             transition_id=Transition.TRANSITION_CONFIGURE
         )
     )
 
     activate_event_handler = RegisterEventHandler(
         OnStateTransition(
-            target_lifecycle_node=sh_detection_server,
+            target_lifecycle_node=sh_perception_server,
             start_state='configuring',
             goal_state='inactive',
             entities=[
-                LogInfo(msg='DetectionServer node is activating.'),
+                LogInfo(msg='PerceptionServer node is activating.'),
                 EmitEvent(event=ChangeState(
-                    lifecycle_node_matcher=matches_action(sh_detection_server),
+                    lifecycle_node_matcher=matches_action(sh_perception_server),
                     transition_id=Transition.TRANSITION_ACTIVATE
                 ))
             ]
@@ -66,12 +66,12 @@ def generate_launch_description():
         executable='parameter_bridge',
         name='arm_camera_bridge',
         output='screen',
-        arguments=[f'detection_image/image@sensor_msgs/msg/Image]gz.msgs.Image',],
+        arguments=['/detection_image@sensor_msgs/msg/Image]gz.msgs.Image'],
     )
 
-    sh_planning_scene_server = Node(
-        package='sh_moveit_planning_scene_server',
-        executable='sh_moveit_planning_scene_server',
+    sh_planning_scene_handler = Node(
+        package='sh_planning_scene_handler',
+        executable='sh_planning_scene_handler',
         output='screen',
         namespace='',
         parameters=[
@@ -109,10 +109,10 @@ def generate_launch_description():
 
     return LaunchDescription([
         *args,
-        sh_detection_server,
+        sh_perception_server,
         configure_event_handler,
         activate_event_handler,
-        sh_planning_scene_server,
-        sh_move_group_server,
-        detection_image_bridge_node
+        sh_planning_scene_handler,
+        # sh_move_group_server,
+        # detection_image_bridge_node
     ])

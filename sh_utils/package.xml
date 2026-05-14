@@ -1,21 +1,16 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>sh_perception_server</name>
+  <name>sh_utils</name>
   <version>1.0.0</version>
-  <description>Perception server for object detection and pose estimation.</description>
+  <description>Utility functions</description>
   <maintainer email="nilton.csv18@edu.udesc.br">nilton</maintainer>
   <license>BSD-3-Clause</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
-
-  <depend>sh_base_template</depend>
-  <depend>sh_interfaces</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

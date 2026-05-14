@@ -1,5 +1,5 @@
 # Add collision object into the scene using known poses
-sh_interfaces/DetectedObjects detected_objects
+sh_interfaces/PerceptionScene perception_scene
 
 ---
 bool success
