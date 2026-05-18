@@ -5,30 +5,38 @@ namespace sh_behavior_tree
 {
 
 GetNextObjectToPick::GetNextObjectToPick(
-  const std::string& action_name, const BT::NodeConfig& config):
-  BT::SyncActionNode(action_name, config), logger_(rclcpp::get_logger(action_name))
+  const std::string& action_name, const BT::NodeConfig& config) :
+    logger_(rclcpp::get_logger(action_name)),
+    sh_base_template::BTServiceNode<
+      rclcpp_lifecycle::LifecycleNode, SelectNextTargetSrv>(action_name, config)
 {
   RCLCPP_INFO(logger_, "Node created.");
 }
 
 BT::PortsList GetNextObjectToPick::providedPorts()
 {
-  return{
-    BT::InputPort<int>("in_current_count", "Current count to pick."),
-    BT::InputPort<std::string>("object_name_prefix", "Object name prefix."),
-    BT::OutputPort<std::string>("current_object_name", "Object name.")
-  };
+  return providedBasicPorts({
+    BT::OutputPort<std::string>("next_object_name", "sad")
+  });
 }
 
-BT::NodeStatus GetNextObjectToPick::tick()
+bool GetNextObjectToPick::send_request(std::shared_ptr<SelectNextTargetSrv::Request>& request)
 {
-  int in_current_count;
-  std::string object_name_prefix;
-  getInput("in_current_count", in_current_count);
-  getInput("object_name_prefix", object_name_prefix);
+  (void) request;
+  // ClearPlanningSceneSrv::Request is empty
+  return true;
+}
 
-  setOutput("current_object_name", object_name_prefix+"_"+std::to_string(in_current_count));
+BT::NodeStatus GetNextObjectToPick::onTick(
+  const std::shared_ptr<SelectNextTargetSrv::Response>& response)
+{
+  if (!response->success) {
+    RCLCPP_ERROR(logger_, "No more objects to pick.");
+    return BT::NodeStatus::FAILURE;
+  }
 
+  setOutput("next_object_name", response->target_name);
+  RCLCPP_INFO(logger_, "%s selected.", response->target_name.c_str());
   return BT::NodeStatus::SUCCESS;
 }
 

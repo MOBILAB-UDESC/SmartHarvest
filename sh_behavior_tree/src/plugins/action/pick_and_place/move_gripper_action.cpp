@@ -6,7 +6,7 @@ namespace sh_behavior_tree
 MoveGripperAction::MoveGripperAction(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTActionNode<
+    sh_base_template::BTActionNode<
       rclcpp_lifecycle::LifecycleNode, MoveToNamedTargetAction>(action_name, node_config)
 {}
 

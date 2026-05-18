@@ -1,0 +1,9 @@
+<library path="prism_constraint_generator">
+  <class
+      type="sh_basic_moveit_pipeline::PrismConstraintGenerator"
+      base_class_type="sh_base_template::MotionConstraintGeneratorBase">
+    <description>
+      Plugin that limits end_effector workspace (a prism).
+    </description>
+  </class>
+</library>

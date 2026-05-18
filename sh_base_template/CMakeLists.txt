@@ -9,6 +9,8 @@ find_package(ament_cmake REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(message_filters REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_visual_tools REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -42,6 +44,8 @@ ament_export_dependencies(
   behaviortree_cpp
   cv_bridge
   message_filters
+  moveit_ros_planning_interface
+  moveit_visual_tools
   rclcpp
   rclcpp_lifecycle
   sensor_msgs

@@ -8,7 +8,7 @@ namespace sh_behavior_tree
 MoveBaseAction::MoveBaseAction(
   const std::string & action_name,
   const BT::NodeConfig & node_config) :
-    sh_bt_base_template::BTActionNode<
+    sh_base_template::BTActionNode<
       rclcpp_lifecycle::LifecycleNode, NavigateToPose>(action_name, node_config)
 {
   node_ = node_config.blackboard->get<typename rclcpp_lifecycle::LifecycleNode::WeakPtr>("root_node");

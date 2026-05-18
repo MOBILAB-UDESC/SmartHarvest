@@ -1,0 +1,5 @@
+# Get target frame from moveIt planning scene
+
+---
+bool success # Wheter any object was found
+string target_name

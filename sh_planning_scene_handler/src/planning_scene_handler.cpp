@@ -19,15 +19,23 @@ PlanningSceneHandler::PlanningSceneHandler(const std::string& server_name) :
   target_primitive_ = get_primitive(get_parameter("target_shape").as_string());
 
   clear_service_ = this->create_service<ClearPlanningSceneSrv>(
-    get_parameter("clear_scene_service_name").as_string(),
+    "clear_scene",
     std::bind(
       &PlanningSceneHandler::clear_service_callback,
       this,
       std::placeholders::_1,
       std::placeholders::_2));
 
+  // select_target_service_ = this->create_service<SelectNextTargetSrv>(
+  //   "select_next_target",
+  //   std::bind(
+  //     &PlanningSceneHandler::select_target_service_callback,
+  //     this,
+  //     std::placeholders::_1,
+  //     std::placeholders::_2));
+
   update_from_pose_service_ = this->create_service<UpdatePlanningSceneFromPosesSrv>(
-    get_parameter("update_scene_service_name").as_string(),
+    "update_from_pose_scene",
     std::bind(
       &PlanningSceneHandler::update_from_pose_service_callback,
       this,
@@ -42,8 +50,6 @@ PlanningSceneHandler::~PlanningSceneHandler()
 
 void PlanningSceneHandler::declare_parameters()
 {
-  declare_parameter("clear_scene_service_name", rclcpp::ParameterValue("clear_scene"));
-  declare_parameter("update_scene_service_name", rclcpp::ParameterValue("update_from_pose_scene"));
   declare_parameter("ground_plane_link", rclcpp::ParameterValue("base_link"));
   declare_parameter("ground_plane_dimension",
     rclcpp::ParameterValue(std::vector<double>({1.0, 1.0, 0.001})));
@@ -79,6 +85,14 @@ void PlanningSceneHandler::clear_service_callback(
   planning_scene_interface_.removeCollisionObjects(collision_objects);
   response->message = std::to_string(objects_size) + " objects removed from the scene";
 }
+
+// void PlanningSceneHandler::select_target_service_callback(
+//   const std::shared_ptr<SelectNextTargetSrv::Request> /*request*/,
+//   std::shared_ptr<SelectNextTargetSrv::Response> response)
+// {
+//   response->success = true;
+//   response->target_name = "something";
+// }
 
 void PlanningSceneHandler::update_from_pose_service_callback(
   const std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request> request,

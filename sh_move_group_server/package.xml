@@ -11,8 +11,13 @@
 
   <depend>geometry_msgs</depend>
   <depend>moveit_ros_planning_interface</depend>
+  <depend>moveit_visual_tools</depend>
   <depend>rclcpp</depend>
+  <depend>tf2_eigen</depend>
+
+  <depend>sh_base_template</depend>
   <depend>sh_interfaces</depend>
+  <depend>sh_utils</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

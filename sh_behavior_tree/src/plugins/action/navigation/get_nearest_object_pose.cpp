@@ -4,7 +4,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.hpp"
 
-#include "sh_interfaces/msg/detected_objects.hpp"
+#include "sh_interfaces/msg/perception_scene.hpp"
 #include "sh_interfaces/msg/single_object_info.hpp"
 
 namespace sh_behavior_tree
@@ -25,7 +25,9 @@ GetNearestObjectPose::GetNearestObjectPose(
 BT::PortsList GetNearestObjectPose::providedPorts()
 {
   return{
-    BT::InputPort<sh_interfaces::msg::DetectedObjects>("objects", "List of detected objects"),
+    BT::InputPort<sh_interfaces::msg::PerceptionScene>(
+      "perception_scene",
+      "Complete perception result containing detected objects, header, and processing metadata"),
     BT::InputPort<double>("safety_dist", "Safety distance from the target."),
     BT::OutputPort<geometry_msgs::msg::PoseStamped>("nearest_object", "Goal pose"),
   };
@@ -33,17 +35,23 @@ BT::PortsList GetNearestObjectPose::providedPorts()
 
 BT::NodeStatus GetNearestObjectPose::tick()
 {
-  sh_interfaces::msg::DetectedObjects objects;
+  // TODO: Implement an approach service.
+  sh_interfaces::msg::PerceptionScene perception_scene;
   double safety_dist;
-  getInput("objects", objects);
+  getInput("perception_scene", perception_scene);
   getInput("safety_dist", safety_dist);
 
   double dist = 10000.0;
-  sh_interfaces::msg::SingleObjectInfo nearest_object;
+  sh_interfaces::msg::ObjectInstance nearest_object;
 
-  for (const auto& object: objects.objects) {
-    if (object.distance < dist) {
-      dist = object.distance;
+  for (const auto& object: perception_scene.objects) {
+    double x = object.pose.position.x;
+    double y = object.pose.position.y;
+    double z = object.pose.position.z;
+
+    double d = std::sqrt(x*x + y*y);
+    if (d < dist) {
+      dist = d;
       nearest_object = object;
     }
   }
@@ -53,19 +61,19 @@ BT::NodeStatus GetNearestObjectPose::tick()
     return BT::NodeStatus::FAILURE;
   }
 
-  double goal_x = (dist - safety_dist) * nearest_object.x / dist;
-  double goal_y = (dist - safety_dist) * nearest_object.y / dist;
+  double goal_x = (dist - safety_dist) * nearest_object.pose.position.x / dist;
+  double goal_y = (dist - safety_dist) * nearest_object.pose.position.y / dist;
 
   geometry_msgs::msg::PoseStamped pose_in;
-  pose_in.header = objects.header;
-  {
-    pose_in.header.stamp = node_.lock()->now();
-  }
+  pose_in.header = perception_scene.header;
+  // {
+  //   pose_in.header.stamp = node_.lock()->now();
+  // }
   pose_in.pose.position.x = goal_x;
   pose_in.pose.position.y = goal_y;
   pose_in.pose.position.z = 0.0;
 
-  double goal_yaw = std::atan2(nearest_object.y, nearest_object.x);
+  double goal_yaw = std::atan2(nearest_object.pose.position.y, nearest_object.pose.position.x);
 
   tf2::Quaternion q;
   q.setRPY(0, 0, goal_yaw);

@@ -5,7 +5,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_bt_base_template/bt_subscription_node.hpp"
+#include "sh_base_template/bt_subscription_node.hpp"
 
 namespace sh_behavior_tree
 {
@@ -15,7 +15,7 @@ namespace sh_behavior_tree
  * @brief BehaviorTree Action Node that controls the rotation of the robot.
  */
 class RotateRobot :
-  public sh_bt_base_template::BTSubscriptionNode<rclcpp_lifecycle::LifecycleNode, nav_msgs::msg::Odometry>
+  public sh_base_template::BTSubscriptionNode<rclcpp_lifecycle::LifecycleNode, nav_msgs::msg::Odometry>
 {
 public:
   /**

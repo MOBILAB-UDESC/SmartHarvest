@@ -1,6 +1,5 @@
 sh_bt_core:
   ros__parameters:
-
     tree_xml_path: ""
     enable_groot: true
 
@@ -15,19 +14,17 @@ sh_bt_core:
 
     # DEFAULT BT NODES CONFIG
     camera_default_topics:
-      - camera_0/rgb/image
-      - camera_0/depth/image
-      - camera_0/rgb/camera_info
-    detection_service_name: run_perception
-    camera_to_end_effector_transform: [-1.571, 0.0, -1.571]
+      - "camera_0/rgb/image"
+      - "camera_0/depth/image"
+      - "camera_0/rgb/camera_info"
+    detection_service_name: "run_perception"
     transformation_timeout: 1.0
-    clear_scene_service_name: clear_scene
-    update_scene_service_name: update_from_pose_scene
-    move_to_named_target_action_name: move_to_named_target
-    move_to_pose_action_name: move_to_pose
-    move_to_object_action_name: move_to_object
-    object_name_prefix: Apple
-
+    clear_scene_service_name: "clear_scene"
+    update_scene_service_name: "update_from_pose_scene"
+    move_to_named_target_action_name: "move_to_named_target"
+    move_to_pose_action_name: "move_to_pose"
+    move_to_object_action_name: "move_to_object"
+    base_link: "base_link"
     # bt_plugin_ids: [something_action_node]
 
 yolo_server:
@@ -49,7 +46,7 @@ sh_perception_server:
         input_size: [1280, 736]
       localiser:
         plugin: "sh_rgbd_perception_pipeline::MeanLocaliser"
-        points: 1
+        points: 4
         camera_to_end_effector_transform: [-1.571, 0.0, -1.571]
       grasp:
         plugin: "sh_rgbd_perception_pipeline::BasicGraspGenerator"
@@ -73,6 +70,10 @@ sh_move_group_server:
       move_to_named_target: move_to_named_target
       move_to_pose: move_to_pose
       move_to_object: move_to_object
+    base_link: "base_link"
+    use_constraints: false
+    constraints:
+      plugin: "sh_basic_moveit_pipeline::PrismConstraintGenerator"
     arm_planning_config:
       move_group: arm
       planning_pipeline: ompl # ompl

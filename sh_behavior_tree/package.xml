@@ -12,7 +12,7 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>behaviortree_cpp</depend>
-  <depend>sh_bt_base_template</depend>
+  <depend>sh_base_template</depend>
   <depend>sh_interfaces</depend>
   <depend>nav_msgs</depend>
 

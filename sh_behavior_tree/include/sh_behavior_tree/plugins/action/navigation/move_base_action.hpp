@@ -6,7 +6,7 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 
-#include "sh_bt_base_template/bt_action_node.hpp"
+#include "sh_base_template/bt_action_node.hpp"
 
 namespace sh_behavior_tree
 {
@@ -19,7 +19,7 @@ using GoalHandleNavigateToPose = rclcpp_action::ClientGoalHandle<NavigateToPose>
  * @brief BehaviorTree Action Node that moves the base to a given pose.
  */
 class MoveBaseAction :
-  public sh_bt_base_template::BTActionNode<rclcpp_lifecycle::LifecycleNode, NavigateToPose>
+  public sh_base_template::BTActionNode<rclcpp_lifecycle::LifecycleNode, NavigateToPose>
 {
 public:
   /**

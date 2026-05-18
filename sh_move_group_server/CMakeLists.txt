@@ -10,7 +10,11 @@ find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(tf2_eigen REQUIRED)
+
+find_package(sh_base_template REQUIRED)
 find_package(sh_interfaces REQUIRED)
+find_package(sh_utils REQUIRED)
 
 include_directories(
   include
@@ -28,7 +32,10 @@ target_link_libraries(
   ${geometry_msgs_TARGETS}
   ${moveit_ros_planning_interface_TARGETS}
   ${moveit_visual_tools_TARGETS}
+  ${sh_base_template_TARGETS}
   ${sh_interfaces_TARGETS}
+  ${sh_utils_TARGETS}
+  ${tf2_eigen_TARGETS}
 )
 
 install(

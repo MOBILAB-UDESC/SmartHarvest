@@ -91,6 +91,40 @@ def generate_launch_description():
         ]
     )
 
+    sh_move_group_server = LifecycleNode(
+        package='sh_move_group_server',
+        executable='sh_move_group_server',
+        name='sh_move_group_server',
+        output='screen',
+        namespace='',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            LaunchConfiguration('params_file')
+        ]
+    )
+
+    configure_event_handler_move_group = EmitEvent(
+        event=ChangeState(
+            lifecycle_node_matcher=matches_action(sh_move_group_server),
+            transition_id=Transition.TRANSITION_CONFIGURE
+        )
+    )
+
+    activate_event_handler_move_group = RegisterEventHandler(
+        OnStateTransition(
+            target_lifecycle_node=sh_move_group_server,
+            start_state='configuring',
+            goal_state='inactive',
+            entities=[
+                LogInfo(msg='PerceptionServer node is activating.'),
+                EmitEvent(event=ChangeState(
+                    lifecycle_node_matcher=matches_action(sh_move_group_server),
+                    transition_id=Transition.TRANSITION_ACTIVATE
+                ))
+            ]
+        )
+    )
+
     args = [
         DeclareLaunchArgument(
             'params_file',
@@ -101,7 +135,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_sim_time',
-            default_value='false',
+            default_value='true',
             choices=['true', 'false'],
             description='Whether to use simulation time'
         ),
@@ -113,6 +147,8 @@ def generate_launch_description():
         configure_event_handler,
         activate_event_handler,
         sh_planning_scene_handler,
-        # sh_move_group_server,
+        sh_move_group_server,
+        configure_event_handler_move_group,
+        activate_event_handler_move_group,
         # detection_image_bridge_node
     ])

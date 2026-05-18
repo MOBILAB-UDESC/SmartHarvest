@@ -5,7 +5,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_bt_base_template/bt_action_node.hpp"
+#include "sh_base_template/bt_action_node.hpp"
 #include "sh_interfaces/action/move_to_named_target.hpp"
 
 namespace sh_behavior_tree
@@ -19,7 +19,7 @@ using GoalHandleMoveToNamedTargetAction = rclcpp_action::ClientGoalHandle<MoveTo
  * @brief BehaviorTree Action Node that moves the gripper to a named target pose.
  */
 class MoveGripperAction :
-  public sh_bt_base_template::BTActionNode<rclcpp_lifecycle::LifecycleNode, MoveToNamedTargetAction>
+  public sh_base_template::BTActionNode<rclcpp_lifecycle::LifecycleNode, MoveToNamedTargetAction>
 {
 public:
   /**

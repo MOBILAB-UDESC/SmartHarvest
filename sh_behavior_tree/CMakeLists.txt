@@ -31,9 +31,9 @@ add_library(get_camera_data_action SHARED src/plugins/action/detection/get_camer
 
 add_library(predict_service SHARED src/plugins/action/detection/predict_service.cpp)
 
-add_library(transform_object_pose SHARED src/plugins/action/common/transform_object_pose.cpp)
+add_library(measure_time SHARED src/plugins/action/common/measure_time.cpp)
 
-add_library(compute_grasp_orientation SHARED src/plugins/action/pick_and_place/compute_grasp_orientation.cpp)
+add_library(transform_object_pose SHARED src/plugins/action/common/transform_object_pose.cpp)
 
 add_library(clear_planning_scene_service SHARED src/plugins/action/pick_and_place/clear_planning_scene_service.cpp)
 
@@ -62,9 +62,9 @@ set(bt_nodes
   get_camera_data_action
   predict_service
 
+  measure_time
   transform_object_pose
 
-  compute_grasp_orientation
   clear_planning_scene_service
   update_scene_from_poses_service
   move_arm_to_named_target_action

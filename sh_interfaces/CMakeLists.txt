@@ -27,8 +27,10 @@ set(srv_files
   "srv/ClearPlanningScene.srv"
   "srv/RunPerception.srv"
   "srv/RunYoloDetection.srv"
+  "srv/SelectNextTarget.srv"
+  "srv/TickTree.srv"
   "srv/UpdatePlanningSceneFromPoses.srv"
-  "srv/TickTree.srv")
+)
 
 set(action_files
   "action/MoveToNamedTarget.action"

@@ -1,12 +1,13 @@
 #include "sh_behavior_tree/plugins/action/navigation/rotate_robot.hpp"
 
 #include "tf2/utils.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace sh_behavior_tree
 {
 
 RotateRobot::RotateRobot(const std::string & action_name, const BT::NodeConfig & node_config) :
-  sh_bt_base_template::BTSubscriptionNode<
+  sh_base_template::BTSubscriptionNode<
     rclcpp_lifecycle::LifecycleNode, nav_msgs::msg::Odometry>(action_name, node_config)
 {
   if (!getInput("max_w", max_w_)) {

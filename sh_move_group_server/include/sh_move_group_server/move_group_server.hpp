@@ -1,35 +1,50 @@
 #ifndef SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 #define SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include "geometry_msgs/msg/pose.hpp"
 #include "moveit/move_group_interface/move_group_interface.hpp"
 #include "moveit/planning_scene_interface/planning_scene_interface.hpp"
 #include "moveit_visual_tools/moveit_visual_tools.h"
+#include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "rclcpp_lifecycle/lifecycle_node.hpp"
 
-#include "sh_interfaces/action/move_to_named_target.hpp"
+#include "sh_base_template/motion_constraint_generator_base.hpp"
 #include "sh_interfaces/action/move_to_object.hpp"
-#include "sh_interfaces/action/move_to_pose.hpp"
-#include "sh_move_group_server/parameter_handler.hpp"
+#include "sh_interfaces/action/move_to_named_target.hpp"
+#include "sh_interfaces/srv/select_next_target.hpp"
 
 namespace sh_move_group_server
 {
-using moveit::planning_interface::MoveGroupInterface;
+
+using CallbackReturn = rclcpp_lifecycle::LifecycleNode::CallbackReturn;
 using MoveToNamedTargetAction = sh_interfaces::action::MoveToNamedTarget;
 using GoalHandleMoveToNamedTargetAction = rclcpp_action::ServerGoalHandle<MoveToNamedTargetAction>;
-using MoveToPoseAction = sh_interfaces::action::MoveToPose;
-using GoalHandleMoveToPoseAction = rclcpp_action::ServerGoalHandle<MoveToPoseAction>;
 using MoveToObjectAction = sh_interfaces::action::MoveToObject;
 using GoalHandleMoveToObjectAction = rclcpp_action::ServerGoalHandle<MoveToObjectAction>;
+using SelectNextTargetSrv = sh_interfaces::srv::SelectNextTarget;
 
-/**
- * @brief Final Goal status reported by the action
- */
-enum GoalStatus {SUCCEEDED = uint8_t(0), ABORTED = uint8_t(1), CANCELED = uint8_t(2)};
-/**
- * @brief Planning/Execution phase reported in action feedback
- */
-enum FeedBackStatus {PLANNING = uint8_t(0), EXECUTING = uint8_t(1)};
+struct MoveGroupParameter
+{
+  std::string move_group;
+  std::string planner_id, planning_pipeline;
+  double planning_time;
+  int planning_attempts;
+  std::vector<double> vel_acc_scaling_factors;
+  std::map<std::string, std::string> planner_params;
+  bool override;
+};  // struct MoveGroupParameter
+
+struct MoveGroupTypes
+{
+  MoveGroupParameter arm;
+  MoveGroupParameter gripper;
+};  // struct MoveGroupTypes
 
 /**
  * @class sh_move_group_server::MoveGroupServer
@@ -40,17 +55,15 @@ enum FeedBackStatus {PLANNING = uint8_t(0), EXECUTING = uint8_t(1)};
  * This node exposes one action server per target type and reuses a
  * common planning and execution pipeline.
  */
-class MoveGroupServer : public rclcpp::Node
+class MoveGroupServer : public rclcpp_lifecycle::LifecycleNode
 {
 public:
   /**
    * @brief A constructor for sh_move_group_server::MoveGroupServer class.
    *
-   * Initializes action servers, and Moveit Group Interfaces.
    * @param node_name Name of the node.
-   * @param options ROS 2 node options.
    */
-  explicit MoveGroupServer(const std::string& node_name, const rclcpp::NodeOptions& options);
+  explicit MoveGroupServer(const std::string& node_name);
 
   /**
    * @brief A destructor for sh_move_group_server::MoveGroupServer class.
@@ -59,9 +72,44 @@ public:
 
 private:
   /**
-   * @brief Declare and initialize parameters
+   * @brief Callback function for configure transition.
+   *
+   * @param state A reference to the state of the Lifecycle Node.
+   * @return SUCCESS or FAILURE.
    */
-  void update_parameters();
+  CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
+
+  /**
+   * @brief Callback function for activate transition.
+   *
+   * @param state A reference to the state of the Lifecycle Node.
+   * @return SUCCESS or FAILURE.
+   */
+  CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
+
+  /**
+   * @brief Callback function for deactivate transition.
+
+   * @param state A reference to the state of the Lifecycle Node.
+   * @return SUCCESS or FAILURE.
+   */
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
+
+  /**
+   * @brief Callback function for cleanup transition.
+
+   * @param state A reference to the state of the Lifecycle Node.
+   * @return SUCCESS or FAILURE.
+   */
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
+
+  /**
+   * @brief Callback function for shutdown transition.
+
+   * @param state A reference to the state of the Lifecycle Node.
+   * @return SUCCESS or FAILURE.
+   */
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Initialize Moveit Group Interface for the arm
@@ -73,29 +121,19 @@ private:
    */
   void gripper_move_group_init();
 
-  /**
-   * @brief Executo an accepted MoveToNameTarget goal asynchronously.
-   *
-   * @param goal_handle Handle for the accepted goal.
-   */
-  void handle_move_to_named_target_accepted(
-    std::shared_ptr<GoalHandleMoveToNamedTargetAction> goal_handle);
+  void select_target_service_callback(
+    const std::shared_ptr<SelectNextTargetSrv::Request> /*request*/,
+    std::shared_ptr<SelectNextTargetSrv::Response> response);
 
   /**
-   * @brief Executo an accepted MoveToObject goal asynchronously.
-   *
-   * @param goal_handle Handle for the accepted goal.
+   * @brief Move to named target action setup.
    */
-  void handle_move_to_object_accepted(
-    std::shared_ptr<GoalHandleMoveToObjectAction> goal_handle);
+  void setup_move_to_named_target_action();
 
   /**
-   * @brief Executo an accepted MoveToPose goal asynchronously.
-   *
-   * @param goal_handle Handle for the accepted goal.
+   * @brief Move to object action setup.
    */
-  void handle_move_to_pose_accepted(
-    std::shared_ptr<GoalHandleMoveToPoseAction> goal_handle);
+  void setup_move_to_object_action();
 
   /**
    * @brief Check whether a named target exists in the SRDF for the active move group.
@@ -114,30 +152,14 @@ private:
    */
   bool object_exists(const std::string& object_name);
 
-  /**
-   * @brief Retrieve the pose of the target object from the planning scene.
-   * @return Object pose.
-  */
-  geometry_msgs::msg::Pose get_object_pose();
-
-  /**
-   * @brief Check if a pose is all zeros.
-   *
-   * @param pose Pose to inspect.
-   * @return True when all position/orientation components are zero.
-   */
-  bool is_zero_pose(const geometry_msgs::msg::Pose& pose);
+  void get_pose_from_named_target(const std::string& named_target, geometry_msgs::msg::Pose& goal_pose);
 
   /**
    * @brief Select the move group interface.
    *
    * @param move_group Named planning group.
    */
-  void select_move_group(const std::string& move_group);
-
-  void update_planning_constraints();
-
-  void clear_planning_constraints();
+  bool select_move_group(const std::string& move_group);
 
   /**
    * @brief Abstract method for planning and execution routine for all action types.
@@ -145,50 +167,48 @@ private:
    * @tparam MoveAction Action type.
    * @param goal_handle Handle of accepted goal.
    * @param result Action result object to fill.
-   * @return GoalStatus final state.
+   * @return true or false.
    */
   template <class MoveAction>
-  GoalStatus plan_and_execute(
+  bool plan_and_execute(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
     std::shared_ptr<typename MoveAction::Result>& result);
 
-  // ROS node handles
-  rclcpp::Logger logger_;
   rclcpp::Node::SharedPtr node_;
   rclcpp::Executor::SharedPtr executor_;
 
-  // Action servers
-  rclcpp_action::Server<MoveToNamedTargetAction>::SharedPtr move_to_named_target_server_;
-  rclcpp_action::Server<MoveToObjectAction>::SharedPtr move_to_object_server_;
-  rclcpp_action::Server<MoveToPoseAction>::SharedPtr move_to_pose_server_;
-
   // Planning groups
-  std::shared_ptr<MoveGroupInterface> arm_move_group_;
-  std::shared_ptr<MoveGroupInterface> gripper_move_group_;
-  std::shared_ptr<MoveGroupInterface> selected_move_group_;
+  MoveGroupTypes move_group_types_;
+  std::shared_ptr<moveit::planning_interface::MoveGroupInterface> arm_move_group_;
+  std::shared_ptr<moveit::planning_interface::MoveGroupInterface> gripper_move_group_;
+  std::shared_ptr<moveit::planning_interface::MoveGroupInterface> selected_move_group_;
+  std::string goal_group_name_;
 
-  // Cached goal data captured from action requests.
-  std::string goal_named_target_;
-  std::string goal_object_name_;
-  std::string goal_move_group_;
-  geometry_msgs::msg::Pose object_pose_;
-  geometry_msgs::msg::Pose pose_;
-  bool attach_, detach_;
-  std::string object_to_attach_detach_, link_to_attach_detach_;
+  // Plugins
+  pluginlib::ClassLoader<sh_base_template::MotionConstraintGeneratorBase> constraint_loader_;
+  // std::string detector_plugin_name_;
+  pluginlib::UniquePtr<sh_base_template::MotionConstraintGeneratorBase> constraints_;
 
   // Planning scene access
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;
   std::vector<std::string> scene_objects_name_;
 
-  std::unique_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
+  std::shared_ptr<moveit_visual_tools::MoveItVisualTools> moveit_visual_tools_;
 
-  // Node parameters and mutex for synchronized access to them
-  Parameter params_;
-  std::map<std::string, std::string> arm_planner_map_;
-  std::map<std::string, std::string> gripper_planner_map_;
-  std::mutex param_mutex_;
+  // NAMED TARGET ACTION
+  rclcpp_action::Server<MoveToNamedTargetAction>::SharedPtr move_to_named_target_server_;
+  std::string goal_named_target_;
+  rclcpp_action::Server<MoveToObjectAction>::SharedPtr move_to_object_server_;
+  std::string goal_object_name_;
+  bool attach_, detach_;
+  std::string object_to_attach_detach_, link_to_attach_detach_;
+
+  rclcpp::Service<SelectNextTargetSrv>::SharedPtr select_target_service_;
+
+  bool use_constraints_;
+
 };
 
-}  // sh_move_group_server
+}  // namespace sh_move_group_server
 
 #endif  // SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_

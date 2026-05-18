@@ -5,13 +5,11 @@
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::NodeOptions options;
-  options.automatically_declare_parameters_from_overrides(true);
-  auto movegroup_server_node = std::make_shared<sh_move_group_server::MoveGroupServer>
-    ("sh_move_group_server", options);
+  auto movegroup_server_node =
+    std::make_shared<sh_move_group_server::MoveGroupServer>("sh_move_group_server");
 
   rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(movegroup_server_node);
+  executor.add_node(movegroup_server_node->get_node_base_interface());
   executor.spin();
 
   rclcpp::shutdown();
