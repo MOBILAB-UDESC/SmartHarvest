@@ -7,3 +7,13 @@
     </description>
   </class>
 </library>
+
+<library path="basic_orientation_constraint">
+  <class
+      type="sh_basic_moveit_pipeline::BasicOrientationConstraint"
+      base_class_type="sh_base_template::MotionConstraintGeneratorBase">
+    <description>
+      Plugin that limits orientation.
+    </description>
+  </class>
+</library>

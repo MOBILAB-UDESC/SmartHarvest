@@ -68,10 +68,6 @@ CallbackReturn MoveGroupServer::on_configure(const rclcpp_lifecycle::State & sta
     return CallbackReturn::FAILURE;
   }
 
-  sh_utils::ros2_node_utils::declare_and_get_parameter<bool>(
-    shared_from_this(), "use_constraints",
-    use_constraints_, false);
-
   return CallbackReturn::SUCCESS;
 }
 
@@ -246,6 +242,9 @@ void MoveGroupServer::setup_move_to_named_target_action()
     goal_named_target_ = goal->named_target;
     goal_group_name_ = goal->group_name;
 
+    use_constraints_ = goal->apply_constraint;
+    cartesian_ = goal->cartesian;
+
     if (!select_move_group(goal_group_name_)) {
       RCLCPP_ERROR(
         get_logger(), "%s is not a valid group name. Check the params yaml config.", goal_group_name_.c_str());
@@ -305,6 +304,12 @@ void MoveGroupServer::setup_move_to_named_target_action()
       //   if (use_constraints_) {
       //     constraints_->apply_constraints(selected_move_group_, moveit_visual_tools_, goal_pose);
       //   }
+
+      //   if (cartesian_) {
+      //     plan_and_execute_cartesian(goal_handle, result, goal_pose);
+      //     result->success = true;
+      //     return;
+      //   }
       // }
 
       auto plan_and_execute_result = plan_and_execute<MoveToNamedTargetAction>(goal_handle, result);
@@ -346,6 +351,9 @@ void MoveGroupServer::setup_move_to_object_action()
     goal_object_name_ = goal->object_name;
     goal_group_name_ = goal->group_name;
 
+    use_constraints_ = goal->apply_constraint;
+    cartesian_ = goal->cartesian;
+
     if (!select_move_group(goal_group_name_)) {
       RCLCPP_ERROR(
         get_logger(), "%s is not a valid group name. Check the params yaml config.", goal_group_name_.c_str());
@@ -383,11 +391,8 @@ void MoveGroupServer::setup_move_to_object_action()
       geometry_msgs::msg::Pose goal_pose =
         planning_scene_interface_.getObjectPoses({goal_object_name_})[goal_object_name_];
 
-      selected_move_group_->setPoseTarget(goal_pose);
-
-      if (use_constraints_) {
-        constraints_->apply_constraints(selected_move_group_, moveit_visual_tools_, goal_pose);
-      }
+      geometry_msgs::msg::Pose pre_grasp_pose = compute_pre_grasp(goal_pose, 0.1);
+      selected_move_group_->setPoseTarget(pre_grasp_pose);
 
       auto plan_and_execute_result = plan_and_execute<MoveToObjectAction>(goal_handle, result);
 
@@ -397,6 +402,23 @@ void MoveGroupServer::setup_move_to_object_action()
           goal_handle->abort(result);
         }
         return;
+      }
+
+      // if (use_constraints_) {
+      //   constraints_->apply_constraints(selected_move_group_, moveit_visual_tools_, goal_pose);
+      // }
+
+      if (cartesian_) {
+        auto cart_result = plan_and_execute_cartesian(goal_handle, result, goal_pose);
+        if (!cart_result) {
+          result->success = false;
+          if (goal_handle->is_executing()) {
+            goal_handle->abort(result);
+          }
+          return;
+        }
+        // result->success = true;
+        // return;
       }
 
       result->success = true;
@@ -535,6 +557,73 @@ bool MoveGroupServer::plan_and_execute(
   result->message = "Path execution completed.";
   RCLCPP_INFO(get_logger(), "Path execution completed.");
   return true;
+}
+
+template <class MoveAction>
+bool MoveGroupServer::plan_and_execute_cartesian(
+  std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
+  std::shared_ptr<typename MoveAction::Result>& result,
+  geometry_msgs::msg::Pose& goal_pose)
+{
+  std::vector<geometry_msgs::msg::Pose> waypoints;
+  waypoints.push_back(goal_pose);
+
+  moveit_msgs::msg::RobotTrajectory trajectory;
+  double fraction = selected_move_group_->computeCartesianPath(waypoints, 0.02, trajectory);
+
+  if (fraction < 0.9) {
+    return false;
+  }
+
+  moveit_visual_tools_->publishTrajectoryLine(
+    trajectory,
+    selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
+  moveit_visual_tools_->trigger();
+
+  RCLCPP_INFO(get_logger(), "Cartesian path: %.3f", fraction);
+
+  auto execution_result = selected_move_group_->execute(trajectory);
+
+  return true;
+}
+
+
+geometry_msgs::msg::Pose MoveGroupServer::compute_pre_grasp(
+  const geometry_msgs::msg::Pose& grasp_pose,
+  double offset_m)
+{
+  RCLCPP_INFO(
+    get_logger(),
+    "Grasp XYZ: [%.3f, %.3f, %.3f]",
+    grasp_pose.position.x,
+    grasp_pose.position.y,
+    grasp_pose.position.z);
+
+  Eigen::Vector3d approach_axis_ee(0.0, 0.0, 1.0);
+
+  Eigen::Quaterniond q(
+    grasp_pose.orientation.w,
+    grasp_pose.orientation.x,
+    grasp_pose.orientation.y,
+    grasp_pose.orientation.z);
+
+  Eigen::Vector3d approach_dir_base = q * approach_axis_ee;
+  approach_dir_base.normalize();
+
+  geometry_msgs::msg::Pose pre_grasp_pose = grasp_pose;
+  pre_grasp_pose.position.x -= approach_dir_base.x() * offset_m;
+  pre_grasp_pose.position.y -= approach_dir_base.y() * offset_m;
+  pre_grasp_pose.position.z -= approach_dir_base.z() * offset_m;
+
+  RCLCPP_INFO(
+    get_logger(),
+    "Pre grasp XYZ: [%.3f, %.3f, %.3f]",
+    pre_grasp_pose.position.x,
+    pre_grasp_pose.position.y,
+    pre_grasp_pose.position.z);
+
+  return pre_grasp_pose;
+
 }
 
 }  // namespace sh_move_group_server

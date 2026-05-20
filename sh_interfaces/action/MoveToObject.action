@@ -2,6 +2,8 @@
 # Goal
 string object_name
 string group_name         # arm or gripper
+bool apply_constraint
+bool cartesian
 
 ---
 # Result

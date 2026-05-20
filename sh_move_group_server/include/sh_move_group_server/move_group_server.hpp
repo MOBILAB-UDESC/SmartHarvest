@@ -174,6 +174,16 @@ private:
     std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
     std::shared_ptr<typename MoveAction::Result>& result);
 
+  template <class MoveAction>
+  bool plan_and_execute_cartesian(
+    std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
+    std::shared_ptr<typename MoveAction::Result>& result,
+    geometry_msgs::msg::Pose& goal_pose);
+
+  geometry_msgs::msg::Pose compute_pre_grasp(
+    const geometry_msgs::msg::Pose& grasp_pose,
+    double offset_m);
+
   rclcpp::Node::SharedPtr node_;
   rclcpp::Executor::SharedPtr executor_;
 
@@ -206,6 +216,7 @@ private:
   rclcpp::Service<SelectNextTargetSrv>::SharedPtr select_target_service_;
 
   bool use_constraints_;
+  bool cartesian_;
 
 };
 

@@ -6,6 +6,8 @@ bool attach
 bool detach
 string object_to_attach_detach
 string link_to_attach_detach
+bool apply_constraint
+bool cartesian
 
 ---
 # Result

@@ -18,6 +18,8 @@ BT::PortsList MoveArmToDetectedObjectAction::providedPorts()
   return providedBasicPorts({
     BT::InputPort<std::string>("group_name", "Plannig group name."),
     BT::InputPort<std::string>("object_name", "Object in the planning scene."),
+    BT::InputPort<bool>("apply_constraints", false, "Whether to apply motion constraints."),
+    BT::InputPort<bool>("cartesian", false, "Whether to use cartesian planning."),
     BT::OutputPort<int>("error_code", "Error ID.")
   });
 }
@@ -32,6 +34,9 @@ bool MoveArmToDetectedObjectAction::update_goal(std::shared_ptr<typename MoveToO
     RCLCPP_ERROR(logger_, "Missing input 'group_name'.");
     return false;
   }
+
+  getInput("apply_constraints", goal_msg->apply_constraint);
+  getInput("cartesian", goal_msg->cartesian);
 
   return true;
 }

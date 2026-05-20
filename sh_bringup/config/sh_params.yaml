@@ -71,20 +71,22 @@ sh_move_group_server:
       move_to_pose: move_to_pose
       move_to_object: move_to_object
     base_link: "base_link"
-    use_constraints: false
+    use_constraints: true
     constraints:
       plugin: "sh_basic_moveit_pipeline::PrismConstraintGenerator"
     arm_planning_config:
       move_group: arm
       planning_pipeline: ompl # ompl
       planner_id: RRTConnectkConfigDefault # TrajOpt
+      # planning_pipeline: stomp
+      # planner_id: STOMP
       planning_time: 10.0
-      planning_attempts: 10
+      planning_attempts: 15
       vel_acc_scaling_factors: [0.5, 0.5]
       override: false
       # STOMP:
       #   num_timesteps: "60"
-      #   num_iterations: "40"
+      #   num_iterations: "50"
       #   num_iterations_after_valid: "0"
       #   num_rollouts: "30"
       #   max_rollouts: "30"

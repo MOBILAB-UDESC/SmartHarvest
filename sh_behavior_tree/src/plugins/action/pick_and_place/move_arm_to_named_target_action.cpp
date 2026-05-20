@@ -18,6 +18,7 @@ BT::PortsList MoveArmToNamedTargetAction::providedPorts()
   return providedBasicPorts({
     BT::InputPort<std::string>("group_name", "Plannig group name."),
     BT::InputPort<std::string>("named_target", "Predifined NamedTarget from the SRDF."),
+    BT::InputPort<bool>("apply_constraints", false, "Whether to apply motion constraints."),
     BT::OutputPort<int>("error_code", "Error ID.")
   });
 }
@@ -32,6 +33,8 @@ bool MoveArmToNamedTargetAction::update_goal(std::shared_ptr<typename MoveToName
     RCLCPP_ERROR(logger_, "Missing input 'group_name'.");
     return false;
   }
+  getInput("apply_constraints", goal_msg->apply_constraint);
+
   return true;
 }
 

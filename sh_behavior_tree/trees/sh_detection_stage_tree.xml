@@ -131,7 +131,7 @@
             next_object_name="{object_name}" />
           <MoveArmToDetectedObjectAction name="MoveToPickAction"
             action_name="{move_to_object_action_name}" action_response_timeout="{default_action_response_timeout}"
-              group_name="arm" object_name="{object_name}"
+              group_name="arm" object_name="{object_name}" cartesian="true"
             error_code="{error_code}" />
           <MoveGripperAction name="AttachObjectAction"
             action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"

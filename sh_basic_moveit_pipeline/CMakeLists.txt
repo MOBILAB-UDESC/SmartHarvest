@@ -38,8 +38,14 @@ ament_target_dependencies(prism_constraint_generator
   ${plugins_dependencies}
 )
 
+add_library(basic_orientation_constraint SHARED src/basic_orientation_constraint.cpp)
+ament_target_dependencies(basic_orientation_constraint
+  ${plugins_dependencies}
+)
+
 set(plugins
   prism_constraint_generator
+  basic_orientation_constraint
 )
 
 pluginlib_export_plugin_description_file(sh_base_template plugins.xml)
