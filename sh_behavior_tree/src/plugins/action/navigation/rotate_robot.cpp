@@ -26,6 +26,12 @@ RotateRobot::RotateRobot(const std::string & action_name, const BT::NodeConfig &
     RCLCPP_ERROR(logger_, "Missing required input port 'kp'.");
     throw std::invalid_argument("Missing required input port 'kp'.");
   }
+  if (!getInput("kp", ki_)) {
+    RCLCPP_ERROR(logger_, "Missing required input port 'ki'.");
+    throw std::invalid_argument("Missing required input port 'ki'.");
+  }
+
+  integral_error_ = 0.0;
 
   twist_pub_ = node_.lock()->create_publisher<geometry_msgs::msg::TwistStamped>(
     "/jackal_drive_base_controller/cmd_vel", 10);
@@ -39,6 +45,7 @@ BT::PortsList RotateRobot::providedPorts()
       "Signed relative yaw target added to current yaw at first tick (rad)."),
     BT::InputPort<double>("angle_tolerance", "Goal angle tolerance (rad)."),
     BT::InputPort<double>("kp", "Proportional gain for yaw controller."),
+    BT::InputPort<double>("ki", "Integral gain for yaw controller."),
   });
 }
 
@@ -50,6 +57,7 @@ BT::NodeStatus RotateRobot::on_timeout()
     return BT::NodeStatus::RUNNING;
   }
   timeout_count_ = 0;
+  integral_error_ = 0.0;
   RCLCPP_ERROR(logger_, "Timeout");
   return BT::NodeStatus::FAILURE;
 }
@@ -60,6 +68,7 @@ BT::NodeStatus RotateRobot::on_tick(const std::shared_ptr<nav_msgs::msg::Odometr
   double current_yaw = tf2::getYaw(last_msg->pose.pose.orientation);
 
   if (!goal_initialized_) {
+    integral_error_ = 0.0;
     goal_yaw_ = current_yaw + angle_rad_;
     goal_initialized_ = true;
   }
@@ -69,12 +78,14 @@ BT::NodeStatus RotateRobot::on_tick(const std::shared_ptr<nav_msgs::msg::Odometr
   while (yaw_delta < -M_PI) yaw_delta += 2 * M_PI;
   RCLCPP_DEBUG(logger_, "Yaw delta: %.3f", yaw_delta);
 
+  integral_error_ += 0.033 * yaw_delta;
+
   if (std::abs(yaw_delta) <= angle_tolerance_) {
     goal_initialized_ = false;
     return BT::NodeStatus::SUCCESS;
   }
 
-  double angular_velocity = yaw_delta*kp_;
+  double angular_velocity = yaw_delta*kp_ + integral_error_*ki_;
   if (angular_velocity > max_w_) {
     angular_velocity = max_w_;
   } else if (angular_velocity < -max_w_) {

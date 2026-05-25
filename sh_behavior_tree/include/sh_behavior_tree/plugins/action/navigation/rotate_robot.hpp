@@ -60,7 +60,8 @@ private:
   double max_w_;
   double angle_rad_;
   double angle_tolerance_;
-  double kp_;
+  double kp_, ki_;
+  double integral_error_;
 
   bool goal_initialized_{false};
   double goal_yaw_;
