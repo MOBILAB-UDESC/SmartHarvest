@@ -8,14 +8,14 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "sh_interfaces/srv/clear_planning_scene.hpp"
-// #include "sh_interfaces/srv/select_next_target.hpp"
+#include "sh_interfaces/srv/remove_object_from_scene.hpp"
 #include "sh_interfaces/srv/update_planning_scene_from_poses.hpp"
 
 namespace sh_planning_scene_handler
 {
 
 using ClearPlanningSceneSrv = sh_interfaces::srv::ClearPlanningScene;
-// using SelectNextTargetSrv = sh_interfaces::srv::SelectNextTarget;
+using RemoveObjectFromSceneSrv = sh_interfaces::srv::RemoveObjectFromScene;
 using UpdatePlanningSceneFromPosesSrv = sh_interfaces::srv::UpdatePlanningSceneFromPoses;
 
 class PlanningSceneHandler : public rclcpp::Node
@@ -33,9 +33,9 @@ private:
     const std::shared_ptr<ClearPlanningSceneSrv::Request> /*request*/,
     std::shared_ptr<ClearPlanningSceneSrv::Response> response);
 
-  // void select_target_service_callback(
-  //   const std::shared_ptr<SelectNextTargetSrv::Request> /*request*/,
-  //   std::shared_ptr<SelectNextTargetSrv::Response> response);
+  void remove_object_callback(
+    const std::shared_ptr<RemoveObjectFromSceneSrv::Request> request,
+    std::shared_ptr<RemoveObjectFromSceneSrv::Response> response);
 
   void update_from_pose_service_callback(
     const std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request> request,
@@ -43,7 +43,7 @@ private:
 
   rclcpp::Logger logger_;
   rclcpp::Service<ClearPlanningSceneSrv>::SharedPtr clear_service_;
-  // rclcpp::Service<SelectNextTargetSrv>::SharedPtr select_target_service_;
+  rclcpp::Service<RemoveObjectFromSceneSrv>::SharedPtr remove_object_service_;
   rclcpp::Service<UpdatePlanningSceneFromPosesSrv>::SharedPtr update_from_pose_service_;
 
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface_;

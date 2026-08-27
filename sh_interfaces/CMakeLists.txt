@@ -25,6 +25,7 @@ set(msg_files
 set(srv_files
   "srv/DetectObjects.srv"
   "srv/ClearPlanningScene.srv"
+  "srv/RemoveObjectFromScene.srv"
   "srv/RunPerception.srv"
   "srv/RunYoloDetection.srv"
   "srv/SelectNextTarget.srv"
@@ -35,7 +36,8 @@ set(srv_files
 set(action_files
   "action/MoveToNamedTarget.action"
   "action/MoveToObject.action"
-  "action/MoveToPose.action")
+  "action/MoveToPose.action"
+  "action/Tick.action")
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}

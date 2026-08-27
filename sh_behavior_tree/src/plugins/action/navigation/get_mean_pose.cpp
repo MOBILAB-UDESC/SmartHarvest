@@ -1,4 +1,4 @@
-#include "sh_behavior_tree/plugins/action/navigation/get_nearest_object_pose.hpp"
+#include "sh_behavior_tree/plugins/action/navigation/get_mean_pose.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -10,7 +10,7 @@
 namespace sh_behavior_tree
 {
 
-GetNearestObjectPose::GetNearestObjectPose(
+GetMeanPose::GetMeanPose(
   const std::string& action_name, const BT::NodeConfig& config):
   BT::SyncActionNode(action_name, config), logger_(rclcpp::get_logger(action_name))
 {
@@ -22,7 +22,7 @@ GetNearestObjectPose::GetNearestObjectPose(
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
-BT::PortsList GetNearestObjectPose::providedPorts()
+BT::PortsList GetMeanPose::providedPorts()
 {
   return{
     BT::InputPort<sh_interfaces::msg::PerceptionScene>(
@@ -33,7 +33,7 @@ BT::PortsList GetNearestObjectPose::providedPorts()
   };
 }
 
-BT::NodeStatus GetNearestObjectPose::tick()
+BT::NodeStatus GetMeanPose::tick()
 {
   // TODO: Implement an approach service.
   sh_interfaces::msg::PerceptionScene perception_scene;
@@ -72,6 +72,7 @@ BT::NodeStatus GetNearestObjectPose::tick()
   // pose_in.pose.position.y = goal_y;
   pose_in.pose.position.z = 0.0;
 
+
   tf2::Quaternion q;
   q.setRPY(0, 0, goal_yaw);
   pose_in.pose.orientation = tf2::toMsg(q);
@@ -103,9 +104,9 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<sh_behavior_tree::GetNearestObjectPose>(name, config);
+      return std::make_unique<sh_behavior_tree::GetMeanPose>(name, config);
     };
 
-  factory.registerBuilder<sh_behavior_tree::GetNearestObjectPose>(
-    "GetNearestObjectPose", builder);
+  factory.registerBuilder<sh_behavior_tree::GetMeanPose>(
+    "GetMeanPose", builder);
 }

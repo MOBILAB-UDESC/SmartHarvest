@@ -1,0 +1,6 @@
+# Clear a collision object from the scene
+string object_name
+
+---
+bool success
+string message

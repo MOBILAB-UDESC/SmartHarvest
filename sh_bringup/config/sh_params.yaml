@@ -3,7 +3,7 @@ sh_bt_core:
     tree_xml_path: ""
     enable_groot: true
 
-    default_sub_timeout: 0.2
+    default_sub_timeout: 1.0
     default_sync_timeout: 0.5
     wait_for_service_timeout: 5.0
     default_service_response_timeout: 5.0

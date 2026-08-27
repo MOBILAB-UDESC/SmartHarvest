@@ -37,6 +37,8 @@ add_library(transform_object_pose SHARED src/plugins/action/common/transform_obj
 
 add_library(clear_planning_scene_service SHARED src/plugins/action/pick_and_place/clear_planning_scene_service.cpp)
 
+add_library(remove_object_service SHARED src/plugins/action/pick_and_place/remove_object_service.cpp)
+
 add_library(update_scene_from_poses_service SHARED src/plugins/action/pick_and_place/update_scene_from_poses_service.cpp)
 
 add_library(move_arm_to_named_target_action SHARED src/plugins/action/pick_and_place/move_arm_to_named_target_action.cpp)
@@ -54,6 +56,8 @@ add_library(rotate_robot SHARED src/plugins/action/navigation/rotate_robot.cpp)
 add_library(move_base_action SHARED src/plugins/action/navigation/move_base_action.cpp)
 
 add_library(get_nearest_object_pose SHARED src/plugins/action/navigation/get_nearest_object_pose.cpp)
+
+add_library(get_mean_pose SHARED src/plugins/action/navigation/get_mean_pose.cpp)
 # CONDITIONS
 add_library(are_objects_found_condition SHARED src/plugins/condition/detection/are_objects_found_condition.cpp)
 
@@ -66,6 +70,7 @@ set(bt_nodes
   transform_object_pose
 
   clear_planning_scene_service
+  remove_object_service
   update_scene_from_poses_service
   move_arm_to_named_target_action
   move_arm_to_detected_object_action
@@ -75,6 +80,7 @@ set(bt_nodes
 
   rotate_robot
   move_base_action
+  get_mean_pose
   get_nearest_object_pose
   # CONDITIONS
   are_objects_found_condition

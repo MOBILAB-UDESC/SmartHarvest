@@ -1,5 +1,16 @@
 <root BTCPP_format="4">
 
+  <!-- <BehaviorTree ID="MainTree">
+    <RetryUntilSuccessful num_attempts="4">
+      <SubTree ID="DetectionTreeBase"
+        topic_names="{camera_default_topics}"
+        sync_timeout="{default_sync_timeout}"
+        service_name="{detection_service_name}"
+        service_response_timeout="{default_service_response_timeout}"
+        _autoremap="true" />
+    </RetryUntilSuccessful>
+  </BehaviorTree> -->
+
   <BehaviorTree ID="MainTree">
     <RetryUntilSuccessful num_attempts="1">
 
@@ -8,29 +19,29 @@
       <Sequence name="MainSequence">
 
         <!-- Scan from distance -->
-        <RetryUntilSuccessful num_attempts="4">
+        <!-- <RetryUntilSuccessful num_attempts="4">
           <Fallback name="ScanFromDistanceFallback">
             <SubTree ID="DetectionTreeBase"
               topic_names="{camera_default_topics}"
               sync_timeout="{default_sync_timeout}"
               service_name="{detection_service_name}"
               service_response_timeout="{default_service_response_timeout}"
-              _autoremap="true" />
+              _autoremap="true" /> -->
             <!-- When no apple is found, rotate the base (PI/2 rad) -->
-            <ForceFailure>
+            <!-- <ForceFailure>
               <Sequence>
                 <RotateRobot
                   topic_name="odometry/filtered" sub_timeout="{default_sub_timeout}"
-                    max_w="0.8" angle_rad="1.67" angle_tolerance="0.1" kp="0.75" />
+                    max_w="0.8" angle_rad="1.67" angle_tolerance="0.1" ki="0.0" kp="0.5"/> -->
                 <!-- Waits for the robot to stop moving -->
-                <Sleep msec="100"/>
+                <!-- <Sleep msec="100"/>
               </Sequence>
             </ForceFailure>
           </Fallback>
-        </RetryUntilSuccessful>
+        </RetryUntilSuccessful> -->
 
         <!-- Approach Sequence -->
-        <TransformObjectPose
+        <!-- <TransformObjectPose
           transformation_frame="base_link" perception_scene="{perception_scene}"
           transformed_perception_scene="{objects_to_map}" />
 
@@ -42,10 +53,19 @@
           action_name="navigate_to_pose" action_response_timeout="{default_action_response_timeout}"
           goal_pose="{nearest_object}" />
 
+        <RotateRobot
+          topic_name="odometry/filtered" sub_timeout="{default_sub_timeout}"
+            max_w="0.8" angle_rad="-1.47" angle_tolerance="0.1" ki="0.0" kp="0.5" /> -->
+
         <!-- Pick and Place Sequence -->
         <MoveArmToNamedTargetAction name="MoveToHomeAction"
           action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
             group_name="arm" named_target="pick"
+          error_code="{error_code}" />
+
+        <MoveGripperAction
+          action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+            group_name="gripper" named_target="open"
           error_code="{error_code}" />
 
         <SubTree ID="DetectionTreeArm"
@@ -66,11 +86,6 @@
         <UpdateSceneFromPosesService
           service_name="{update_scene_service_name}" service_response_timeout="{default_service_response_timeout}"
             perception_scene="{perception_scene}" />
-
-        <MoveGripperAction
-          action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
-            group_name="gripper" named_target="open"
-          error_code="{error_code}" />
 
         <!-- Store variables into the blackboard -->
         <Script code=" n_objects := total_objects " />
@@ -129,24 +144,28 @@
           <GetNextObjectToPick
             service_name="select_next_target" service_response_timeout="{default_service_response_timeout}"
             next_object_name="{object_name}" />
-          <MoveArmToDetectedObjectAction name="MoveToPickAction"
-            action_name="{move_to_object_action_name}" action_response_timeout="{default_action_response_timeout}"
-              group_name="arm" object_name="{object_name}" cartesian="true"
-            error_code="{error_code}" />
-          <MoveGripperAction name="AttachObjectAction"
+          <RetryUntilSuccessful name="GraspLoop" num_attempts="1">
+            <MoveArmToDetectedObjectAction name="MoveToPickAction"
+              action_name="{move_to_object_action_name}" action_response_timeout="{default_action_response_timeout}"
+                group_name="arm" object_name="{object_name}" cartesian="true"
+              error_code="{error_code}" />
+          </RetryUntilSuccessful>
+          <!-- <MoveGripperAction name="AttachObjectAction"
             action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
               group_name="gripper" named_target="half-close"
               attach="1" detach="0" object_to_attach_detach="{object_name}" link_to_attach_detach="arm_gripper_base_link"
             error_code="{error_code}" />
-          <MoveArmToNamedTargetAction name="MoveToPlaceAction"
-            action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
-              group_name="arm" named_target="place"
-            error_code="{error_code}" />
+          <RetryUntilSuccessful name="PlaceLoop" num_attempts="1">
+            <MoveArmToNamedTargetAction name="MoveToPlaceAction"
+              action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
+                group_name="arm" named_target="place"
+              error_code="{error_code}" />
+          </RetryUntilSuccessful>
           <MoveGripperAction name="DetachObjectAction"
             action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
               group_name="gripper" named_target="open"
               attach="0" detach="1" object_to_attach_detach="{object_name}"
-            error_code="{error_code}" />
+            error_code="{error_code}" /> -->
           <!-- <MoveArmToNamedTargetAction name="MoveToHomeAction"
             action_name="{move_to_named_target_action_name}" action_response_timeout="{default_action_response_timeout}"
               group_name="arm" named_target="pick"
@@ -154,10 +173,13 @@
           <MeasureTime
             start="false" start_time="{start_time}" />
         </Sequence>
-      </ForceSuccess>
-      <CheckErrorIds
-        error_id="{error_code}" in_current_count="{index}" total_objects="{total_objects}"
-        out_next_count="{index}" collected_object="{n_collected_objects}"/>
+        </ForceSuccess>
+        <RemoveObjectService
+          service_name="remove_object_from_scene" service_response_timeout="{default_service_response_timeout}"
+            object_name="{object_name}" />
+        <CheckErrorIds
+          error_id="{error_code}" in_current_count="{index}" total_objects="{total_objects}"
+          out_next_count="{index}" collected_object="{n_collected_objects}"/>
     </Sequence>
   </BehaviorTree>
 

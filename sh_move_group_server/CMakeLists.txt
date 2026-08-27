@@ -10,6 +10,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 
 find_package(sh_base_template REQUIRED)
@@ -24,6 +25,7 @@ add_executable(
   ${PROJECT_NAME}
   src/main.cpp
   src/move_group_server.cpp
+  src/moveit_config_loader.cpp
 )
 
 target_link_libraries(
@@ -35,6 +37,7 @@ target_link_libraries(
   ${sh_base_template_TARGETS}
   ${sh_interfaces_TARGETS}
   ${sh_utils_TARGETS}
+  ${std_msgs_TARGETS}
   ${tf2_eigen_TARGETS}
 )
 

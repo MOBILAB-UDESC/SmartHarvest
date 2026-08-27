@@ -1,6 +1,7 @@
 #ifndef SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 #define SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 
+#include <chrono>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@
 #include "sh_interfaces/action/move_to_object.hpp"
 #include "sh_interfaces/action/move_to_named_target.hpp"
 #include "sh_interfaces/srv/select_next_target.hpp"
+#include "sh_move_group_server/moveit_config_loader.hpp"
 
 namespace sh_move_group_server
 {
@@ -29,6 +31,10 @@ using MoveToObjectAction = sh_interfaces::action::MoveToObject;
 using GoalHandleMoveToObjectAction = rclcpp_action::ServerGoalHandle<MoveToObjectAction>;
 using SelectNextTargetSrv = sh_interfaces::srv::SelectNextTarget;
 
+/**
+ * @struct sh_move_group_server::MoveGroupParameter
+ * @brief Options for a MoveGroup.
+ */
 struct MoveGroupParameter
 {
   std::string move_group;
@@ -111,6 +117,36 @@ private:
    */
   CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
+  MoveItConfigOptions get_moveit_config_options();
+
+  /**
+   * @brief Copy the MoveIt configuration parameters exposed by the move_group node
+   * (kinematics solvers, joint limits) onto node_.
+   *
+   * MoveGroupInterface builds its RobotModel from node_, and RobotModelLoader only
+   * instantiates the kinematics solvers of a group when the matching
+   * robot_description_kinematics.<group>.* parameters live on that node. Without them
+   * planning through move_group still works (it is solved server side), but every client
+   * side IK query, such as the setFromIK call of the cartesian pipeline, fails with
+   * "No kinematics solver instantiated for group". The RobotModel is built and cached on
+   * the first MoveGroupInterface construction, so this has to run before
+   * arm_move_group_init().
+   *
+   * @return True when at least one parameter was imported.
+   */
+  bool import_moveit_parameters();
+
+  /**
+   * @brief Block until a node shows up in the ROS graph.
+   *
+   * @param fully_qualified_name Name of the node to wait for, leading slash included.
+   * @param deadline Absolute time at which to give up.
+   * @return True when the node showed up before the deadline.
+   */
+  bool wait_for_node(
+    const std::string& fully_qualified_name,
+    const std::chrono::steady_clock::time_point& deadline);
+
   /**
    * @brief Initialize Moveit Group Interface for the arm
    */
@@ -178,6 +214,7 @@ private:
   bool plan_and_execute_cartesian(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
     std::shared_ptr<typename MoveAction::Result>& result,
+    geometry_msgs::msg::Pose& pre_goal_pose,
     geometry_msgs::msg::Pose& goal_pose);
 
   geometry_msgs::msg::Pose compute_pre_grasp(

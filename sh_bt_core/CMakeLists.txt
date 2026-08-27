@@ -9,6 +9,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(sh_behavior_tree REQUIRED)
 find_package(sh_interfaces REQUIRED)
@@ -30,6 +31,7 @@ target_link_libraries(
   ament_index_cpp::ament_index_cpp
   behaviortree_cpp::behaviortree_cpp
   rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
   rclcpp_lifecycle::rclcpp_lifecycle
   ${sh_interfaces_TARGETS}
 )

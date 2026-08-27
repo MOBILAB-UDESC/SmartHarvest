@@ -26,6 +26,14 @@ PlanningSceneHandler::PlanningSceneHandler(const std::string& server_name) :
       std::placeholders::_1,
       std::placeholders::_2));
 
+  remove_object_service_ = this->create_service<RemoveObjectFromSceneSrv>(
+    "remove_object_from_scene",
+    std::bind(
+      &PlanningSceneHandler::remove_object_callback,
+      this,
+      std::placeholders::_1,
+      std::placeholders::_2));
+
   // select_target_service_ = this->create_service<SelectNextTargetSrv>(
   //   "select_next_target",
   //   std::bind(
@@ -86,13 +94,24 @@ void PlanningSceneHandler::clear_service_callback(
   response->message = std::to_string(objects_size) + " objects removed from the scene";
 }
 
-// void PlanningSceneHandler::select_target_service_callback(
-//   const std::shared_ptr<SelectNextTargetSrv::Request> /*request*/,
-//   std::shared_ptr<SelectNextTargetSrv::Response> response)
-// {
-//   response->success = true;
-//   response->target_name = "something";
-// }
+void PlanningSceneHandler::remove_object_callback(
+  const std::shared_ptr<RemoveObjectFromSceneSrv::Request> request,
+  std::shared_ptr<RemoveObjectFromSceneSrv::Response> response)
+{
+  auto attached_objects = planning_scene_interface_.getAttachedObjects();
+  moveit_msgs::msg::AttachedCollisionObject detach_object;
+  for (const auto& attached_object: attached_objects) {
+    if (request->object_name == attached_object.first) {
+      detach_object.object.id = attached_object.first;
+      detach_object.object.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+      planning_scene_interface_.applyAttachedCollisionObject(detach_object);
+    }
+  }
+
+  planning_scene_interface_.removeCollisionObjects({request->object_name});
+  response->success = true;
+  response->message = "removed";
+}
 
 void PlanningSceneHandler::update_from_pose_service_callback(
   const std::shared_ptr<UpdatePlanningSceneFromPosesSrv::Request> request,

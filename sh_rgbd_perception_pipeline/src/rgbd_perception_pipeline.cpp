@@ -20,6 +20,7 @@ RgbdPerceptionPipeline::RgbdPerceptionPipeline() :
 RgbdPerceptionPipeline::~RgbdPerceptionPipeline()
 {
   reset_plugins();
+  perception_publisher_.reset();
 }
 
 bool RgbdPerceptionPipeline::configure(
@@ -75,6 +76,9 @@ bool RgbdPerceptionPipeline::configure(
     return false;
   }
 
+  perception_publisher_ = shared_node->create_publisher<sensor_msgs::msg::Image>(
+    "perception_image", 10);
+
   return true;
 }
 
@@ -99,6 +103,7 @@ void RgbdPerceptionPipeline::cleanup()
   localiser_->cleanup();
   grasp_->cleanup();
   reset_plugins();
+  perception_publisher_.reset();
 }
 
 bool RgbdPerceptionPipeline::process(
@@ -176,10 +181,35 @@ bool RgbdPerceptionPipeline::process(
     output.objects[i].pose = localiser_output.poses[i].pose;
   }
 
+  show_image(cv_rgb_ptr->image, detector_output);
+
   auto end = std::chrono::steady_clock::now();
   output.processing_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
   return true;
+}
+
+void RgbdPerceptionPipeline::show_image(
+  cv::Mat rgb_image,
+  const sh_base_template::types::DetectorOutput& detector_output)
+{
+  cv::Mat rgb_for_publish;
+  cv::cvtColor(rgb_image, rgb_for_publish, cv::COLOR_BGR2RGB);
+  for (const auto& output: detector_output.output) {
+    cv::Rect rect(
+      output.bbox.x - output.bbox.width/2,
+      output.bbox.y - output.bbox.height/2,
+      output.bbox.width,
+      output.bbox.height);
+    cv::rectangle(rgb_for_publish, rect, cv::Scalar(0, 255, 0), 2);
+  }
+
+  sensor_msgs::msg::Image::SharedPtr img_msg = cv_bridge::CvImage(
+    std_msgs::msg::Header(),
+    "rgb8",
+    rgb_for_publish).toImageMsg();
+
+  perception_publisher_->publish(*img_msg);
 }
 
 }  // namespace sh_rgbd_perception_pipeline

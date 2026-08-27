@@ -1,0 +1,20 @@
+# Tick of the behaviour tree hosted by sh_bt_core.
+# Goal
+---
+# Result
+uint8 IDLE=0
+uint8 RUNNING=1
+uint8 SUCCESS=2
+uint8 FAILURE=3
+
+bool success
+uint8 status
+uint32 ticks
+float64 elapsed_time
+string message
+---
+# Feedback
+uint8 status
+uint32 ticks
+float64 elapsed_time
+string active_node

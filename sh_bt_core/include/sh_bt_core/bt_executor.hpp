@@ -1,19 +1,67 @@
 #ifndef SH_BT_CORE__BT_EXECUTOR_HPP_
 #define SH_BT_CORE__BT_EXECUTOR_HPP_
 
+#include <atomic>
+
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/blackboard.h"
+#include "behaviortree_cpp/loggers/abstract_logger.h"
 #include "behaviortree_cpp/loggers/groot2_publisher.h"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
 #include "sh_bt_core/bt_node_loader.hpp"
-#include "sh_interfaces/srv/tick_tree.hpp"
+#include "sh_interfaces/action/tick.hpp"
 
 namespace sh_bt_core
 {
 
 using CallbackReturn = rclcpp_lifecycle::LifecycleNode::CallbackReturn;
+using TickAction = sh_interfaces::action::Tick;
+using GoalHandleTickAction = rclcpp_action::ServerGoalHandle<TickAction>;
+
+/**
+ * @class sh_bt_core::ActiveNodeTracker
+ * @brief Behaviour tree node tracking.
+ */
+class ActiveNodeTracker : public BT::StatusChangeLogger
+{
+public:
+  /**
+   * @brief A constructor for sh_bt_core::ActiveNodeTracker class.
+   *
+   * @param root_node Root node of the tree to observe.
+   */
+  explicit ActiveNodeTracker(BT::TreeNode * root_node);
+
+  /**
+   * @brief Called by the tree on every status transition.
+   *
+   * @param timestamp Time of the transition.
+   * @param node Node that changed status.
+   * @param prev_status Status before the transition.
+   * @param status Status after the transition.
+   */
+  void callback(
+    BT::Duration timestamp,
+    const BT::TreeNode & node,
+    BT::NodeStatus prev_status,
+    BT::NodeStatus status) override;
+
+  void flush() override;
+
+  /**
+   * @brief Name of the last node seen in the RUNNING state.
+   *
+   * @return Node name.
+   */
+  std::string active_node();
+
+private:
+  std::mutex mutex_;
+  std::string active_node_;
+};
 
 /**
  * @class sh_behavior_core::BTExecutor
@@ -91,13 +139,25 @@ private:
   BT::Blackboard::Ptr setup_blackboard();
 
   /**
+   * @brief Creates the tick action server.
+   */
+  void setup_tick_action();
+
+  void execute_tick(const std::shared_ptr<GoalHandleTickAction> goal_handle);
+
+  void stop_running_goal();
+
+  /**
    * @brief Callback function for ticking the Behavior Tree.
    */
   void tick_callback(const std::shared_ptr<sh_interfaces::srv::TickTree::Request> request,
   std::shared_ptr<sh_interfaces::srv::TickTree::Response> response);
 
   rclcpp::Logger logger_; // Ros 2 node logger
-  rclcpp::Service<sh_interfaces::srv::TickTree>::SharedPtr tick_service_; // ROS 2 service
+
+  rclcpp_action::Server<TickAction>::SharedPtr tick_action_server_;
+  std::atomic_bool goal_running_{false};
+  std::thread tick_thread_;
 
   std::unique_ptr<BT::Groot2Publisher> groot_publisher_;
 

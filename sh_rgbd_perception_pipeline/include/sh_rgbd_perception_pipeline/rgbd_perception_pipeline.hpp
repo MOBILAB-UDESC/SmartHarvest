@@ -90,6 +90,12 @@ private:
     grasp_.reset();
   };
 
+  void show_image(
+    cv::Mat rgb_image,
+    const sh_base_template::types::DetectorOutput& detector_output);
+
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr perception_publisher_;
+
   pluginlib::ClassLoader<sh_base_template::DetectorBase> detector_loader_;
   pluginlib::ClassLoader<sh_base_template::LocaliserBase> localiser_loader_;
   pluginlib::ClassLoader<sh_base_template::GraspGeneratorBase> grasp_loader_;

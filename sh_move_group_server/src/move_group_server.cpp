@@ -1,22 +1,33 @@
 #include "sh_move_group_server/move_group_server.hpp"
 
+#include <algorithm>
+#include <functional>
 #include <thread>
 
 #include "tf2_eigen/tf2_eigen.hpp"
 
 #include "sh_utils/ros2_node_utils.hpp"
 
-// TODO: Add mutex
 
 namespace sh_move_group_server
 {
+namespace
+{
+std::mutex param_mutex_;
+}
 
 MoveGroupServer::MoveGroupServer(const std::string & node_name) :
   rclcpp_lifecycle::LifecycleNode(node_name),
-  node_(std::make_shared<rclcpp::Node>("move_group_server_node")),
   executor_(std::make_shared<rclcpp::executors::SingleThreadedExecutor>()),
   constraint_loader_("sh_base_template", "sh_base_template::MotionConstraintGeneratorBase")
 {
+  rclcpp::NodeOptions node_options;
+  node_options.arguments({"--ros-args", "-r", "__node:=" + node_name + "_moveit"});
+  node_options.parameter_overrides(
+    {rclcpp::Parameter("use_sim_time", get_parameter("use_sim_time").as_bool())});
+
+  node_ = std::make_shared<rclcpp::Node>(node_name + "_moveit", node_options);
+
   executor_->add_node(node_);
   std::thread([this]() { executor_->spin(); }).detach();
 
@@ -24,14 +35,18 @@ MoveGroupServer::MoveGroupServer(const std::string & node_name) :
 }
 
 MoveGroupServer::~MoveGroupServer()
-{
-
-}
+{}
 
 CallbackReturn MoveGroupServer::on_configure(const rclcpp_lifecycle::State & state)
 {
   (void) state;
   RCLCPP_INFO(get_logger(), "Configuring.");
+
+  MoveItConfigLoader moveit_config_loader(node_, get_logger());
+  if (!moveit_config_loader.load()) {
+    RCLCPP_ERROR(get_logger(), "Could not import the MoveIt configuration.");
+    return CallbackReturn::FAILURE;
+  }
 
   arm_move_group_init();
   gripper_move_group_init();
@@ -45,10 +60,6 @@ CallbackReturn MoveGroupServer::on_configure(const rclcpp_lifecycle::State & sta
       std::placeholders::_2));
 
   std::string constraint_plugin_name;
-  sh_utils::ros2_node_utils::declare_and_get_parameter<std::string>(
-    shared_from_this(), "constraints.plugin",
-    constraint_plugin_name, "sh_basic_moveit_pipeline::PrismConstraintGenerator");
-
   sh_utils::ros2_node_utils::declare_and_get_parameter<std::string>(
     shared_from_this(), "constraints.plugin",
     constraint_plugin_name, "sh_basic_moveit_pipeline::PrismConstraintGenerator");
@@ -295,7 +306,9 @@ void MoveGroupServer::setup_move_to_named_target_action()
         planning_scene_interface_.removeCollisionObjects({object_to_attach_detach_});
       }
 
-      // if (selected_move_group_->getName() == "arm") {
+      if (selected_move_group_->getName() == "arm") {
+        auto current_state_ptr = selected_move_group_->getCurrentState(1.0);
+        selected_move_group_->setStartState(*current_state_ptr);
       //   geometry_msgs::msg::Pose goal_pose;
       //   get_pose_from_named_target(goal_named_target_, goal_pose);
 
@@ -310,7 +323,7 @@ void MoveGroupServer::setup_move_to_named_target_action()
       //     result->success = true;
       //     return;
       //   }
-      // }
+      }
 
       auto plan_and_execute_result = plan_and_execute<MoveToNamedTargetAction>(goal_handle, result);
 
@@ -394,22 +407,28 @@ void MoveGroupServer::setup_move_to_object_action()
       geometry_msgs::msg::Pose pre_grasp_pose = compute_pre_grasp(goal_pose, 0.1);
       selected_move_group_->setPoseTarget(pre_grasp_pose);
 
-      auto plan_and_execute_result = plan_and_execute<MoveToObjectAction>(goal_handle, result);
+      // auto plan_and_execute_result = plan_and_execute<MoveToObjectAction>(
+      //   goal_handle,
+      //   result);
 
-      if (!plan_and_execute_result) {
-        result->success = false;
-        if (goal_handle->is_executing()) {
-          goal_handle->abort(result);
-        }
-        return;
-      }
+      // if (!plan_and_execute_result) {
+      //   result->success = false;
+      //   if (goal_handle->is_executing()) {
+      //     goal_handle->abort(result);
+      //   }
+      //   return;
+      // }
 
       // if (use_constraints_) {
       //   constraints_->apply_constraints(selected_move_group_, moveit_visual_tools_, goal_pose);
       // }
 
       if (cartesian_) {
-        auto cart_result = plan_and_execute_cartesian(goal_handle, result, goal_pose);
+        auto cart_result = plan_and_execute_cartesian(
+          goal_handle,
+          result,
+          pre_grasp_pose,
+          goal_pose);
         if (!cart_result) {
           result->success = false;
           if (goal_handle->is_executing()) {
@@ -455,7 +474,7 @@ bool MoveGroupServer::named_target_exists(
 {
   std::vector<std::string> named_target_list;
   {
-    // std::lock_guard<std::mutex> lock(param_mutex_);
+    std::lock_guard<std::mutex> lock(param_mutex_);
     if (move_group == move_group_types_.arm.move_group) {
       named_target_list = arm_move_group_->getNamedTargets();
     } else if (move_group == move_group_types_.gripper.move_group) {
@@ -508,7 +527,6 @@ bool MoveGroupServer::plan_and_execute(
   auto feedback = std::make_shared<typename MoveAction::Feedback>();
 
   moveit::planning_interface::MoveGroupInterface::Plan group_plan;
-  // feedback->phase = FeedBackStatus::PLANNING;
   feedback->message = "Planning started.";
   goal_handle->publish_feedback(feedback);
 
@@ -526,33 +544,15 @@ bool MoveGroupServer::plan_and_execute(
     selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
   moveit_visual_tools_->trigger();
 
-  // if (goal_handle->is_canceling()) {
-  //   goal_handle->canceled(result);
-  //   return GoalStatus::CANCELED;
-  // }
-
-  // feedback->phase = FeedBackStatus::EXECUTING;
   feedback->message = "Path found. Execution started.";
   goal_handle->publish_feedback(feedback);
   auto execution_result = selected_move_group_->execute(plan);
 
   if (!execution_result) {
-    // if (goal_handle->is_canceling()) {
-    //   result->success = false;
-    //   result->message = "Goal canceled.";
-    //   goal_handle->canceled(result);
-    //   return GoalStatus::CANCELED;
-    // }
     RCLCPP_ERROR(get_logger(), "Path execution failed!. Skipped.");
     result->message = "Path execution failed.";
     return false;
-    // return GoalStatus::ABORTED;
   }
-
-  // if (goal_handle->is_canceling()) {
-  //   goal_handle->canceled(result);
-  //   return GoalStatus::CANCELED;
-  // }
 
   result->message = "Path execution completed.";
   RCLCPP_INFO(get_logger(), "Path execution completed.");
@@ -563,27 +563,110 @@ template <class MoveAction>
 bool MoveGroupServer::plan_and_execute_cartesian(
   std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
   std::shared_ptr<typename MoveAction::Result>& result,
+  geometry_msgs::msg::Pose& pre_goal_pose,
   geometry_msgs::msg::Pose& goal_pose)
 {
-  std::vector<geometry_msgs::msg::Pose> waypoints;
-  waypoints.push_back(goal_pose);
+  const int ik_attemps = 40;
+  const double ik_timeout = 0.01;
+  const double uniq_res = 1e-3;
+  const double eef_step = 0.01;
+  const double jump_threshold = 0.0;
+  const double min_fraction = 0.95;
 
+  auto model = selected_move_group_->getRobotModel();
+
+  const std::string group_name = selected_move_group_->getName();
+  const moveit::core::JointModelGroup* jmg = model->getJointModelGroup(group_name);
+
+  auto current_state_ptr = selected_move_group_->getCurrentState(1.0);
+
+  Eigen::Isometry3d pre_T, goal_T;
+  tf2::fromMsg(pre_goal_pose, pre_T);
+  tf2::fromMsg(goal_pose, goal_T);
+
+  const std::string tip_link = selected_move_group_->getEndEffectorLink();
+
+  std::vector<double> q;
+  bool found = false;
   moveit_msgs::msg::RobotTrajectory trajectory;
-  double fraction = selected_move_group_->computeCartesianPath(waypoints, 0.02, trajectory);
+  for (int i = 0; i < ik_attemps; ++i) {
+    moveit::core::RobotState rs(*current_state_ptr);
 
-  if (fraction < 0.9) {
+    rs.setToRandomPositions(jmg);
+
+    bool ok = false;
+    ok = rs.setFromIK(jmg, pre_T, tip_link, ik_timeout);
+    if (!ok) continue;
+
+    rs.update();
+    if (!rs.satisfiesBounds(jmg)) continue;
+
+    rs.copyJointGroupPositions(jmg, q);
+
+    RCLCPP_INFO(get_logger(), "Q: %.3f, %.3f, %.3f, %.3f, %.3f, %.3f", q[0], q[1], q[2], q[3], q[4], q[5]);
+
+    selected_move_group_->setStartState(rs);
+    // From pre-grasp to grasp pose (cartesian checking)
+    std::vector<geometry_msgs::msg::Pose> waypoints;
+    waypoints.push_back(goal_pose);
+    double fraction = selected_move_group_->computeCartesianPath(waypoints, 0.02, trajectory);
+
+    RCLCPP_INFO(get_logger(), "Cartesian path %d: %.3f", i, fraction);
+
+    if (fraction > 0.9) {
+      found = true;
+      selected_move_group_->setStartState(*current_state_ptr);
+      selected_move_group_->setJointValueTarget(q);
+      break;
+    }
+  }
+
+  if (!found) {
+    RCLCPP_ERROR(get_logger(), "Cartesian planning failed!.");
+    result->message = "No path found.";
     return false;
   }
+
+
+  moveit::planning_interface::MoveGroupInterface::Plan group_plan;
+
+  auto const ok = static_cast<bool>(selected_move_group_->plan(group_plan));
+  auto const [success, plan] = std::make_pair(ok, group_plan);
+
+  if (!success) {
+    RCLCPP_ERROR(get_logger(), "Planning failed!.");
+    result->message = "Planning goes wrong.";
+    return false;
+  }
+
+  moveit_visual_tools_->publishTrajectoryLine(
+    plan.trajectory,
+    selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
+  moveit_visual_tools_->trigger();
 
   moveit_visual_tools_->publishTrajectoryLine(
     trajectory,
     selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
   moveit_visual_tools_->trigger();
 
-  RCLCPP_INFO(get_logger(), "Cartesian path: %.3f", fraction);
+  auto execution_result = selected_move_group_->execute(plan);
 
-  auto execution_result = selected_move_group_->execute(trajectory);
+  if (!execution_result) {
+    RCLCPP_ERROR(get_logger(), "Path execution failed!. Skipped.");
+    result->message = "Path execution failed.";
+    return false;
+  }
 
+  execution_result = selected_move_group_->execute(trajectory);
+
+  if (!execution_result) {
+    RCLCPP_ERROR(get_logger(), "Cartesian path execution failed!. Skipped.");
+    result->message = "Cartesian path execution failed.";
+    return false;
+  }
+
+  result->message = "Path execution completed.";
+  RCLCPP_INFO(get_logger(), "Path execution completed.");
   return true;
 }
 

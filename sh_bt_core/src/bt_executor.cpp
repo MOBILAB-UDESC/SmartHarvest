@@ -3,6 +3,32 @@
 namespace sh_bt_core
 {
 
+ActiveNodeTracker::ActiveNodeTracker(BT::TreeNode * root_node)
+: BT::StatusChangeLogger(root_node)
+{}
+
+void ActiveNodeTracker::callback(
+  BT::Duration /*timestamp*/,
+  const BT::TreeNode & node,
+  BT::NodeStatus /*prev_status*/,
+  BT::NodeStatus status)
+{
+  if (status != BT::NodeStatus::RUNNING) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  active_node_ = node.name();
+}
+
+void ActiveNodeTracker::flush()
+{}
+
+std::string ActiveNodeTracker::active_node()
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  return active_node_;
+}
+
 BTExecutor::BTExecutor(const std::string & node_name):
   rclcpp_lifecycle::LifecycleNode(node_name),
   logger_(rclcpp::get_logger(node_name))
@@ -53,6 +79,8 @@ CallbackReturn BTExecutor::on_activate(const rclcpp_lifecycle::State& state)
       std::placeholders::_1,
       std::placeholders::_2));
 
+  setup_tick_action();
+
   RCLCPP_INFO(logger_, "Activated.");
   return CallbackReturn::SUCCESS;
 }
@@ -62,6 +90,7 @@ CallbackReturn BTExecutor::on_deactivate(const rclcpp_lifecycle::State& state)
   (void) state;
   RCLCPP_INFO(logger_, "Deactivating.");
   tick_service_.reset();
+  stop_running_goal();
   RCLCPP_INFO(logger_, "Deactivated.");
   return CallbackReturn::SUCCESS;
 }
@@ -131,6 +160,134 @@ BT::Blackboard::Ptr BTExecutor::setup_blackboard()
   blackboard->set("default_sub_timeout", get_parameter("default_sub_timeout").as_double());
 
   return blackboard;
+}
+
+void BTExecutor::setup_tick_action()
+{
+  // REQUEST
+  auto goal_request = [this](
+    const rclcpp_action::GoalUUID& /*uuid*/,
+    std::shared_ptr<const TickAction::Goal> goal)
+  {
+    if (goal_running_.load()) {
+      RCLCPP_WARN(logger_, "The tree is already being ticked. Goal rejected.");
+      return rclcpp_action::GoalResponse::REJECT;
+    }
+
+    RCLCPP_INFO(logger_, "Tick goal accepted.");
+    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+  };
+
+  // CANCEL
+  auto goal_cancel = [this](
+    const std::shared_ptr<GoalHandleTickAction> /*goal_handle*/)
+  {
+    RCLCPP_INFO(get_logger(), "Received request to cancel goal.");
+
+    return rclcpp_action::CancelResponse::ACCEPT;
+  };
+
+  // ACCEPT
+  auto goal_accepted = [this](
+    const std::shared_ptr<GoalHandleTickAction> goal_handle)
+  {
+    if (tick_thread_.joinable()) {
+      tick_thread_.join();
+    }
+
+    goal_running_.store(true);
+
+    tick_thread_ = std::thread(
+      [this, goal_handle]() {
+        execute_tick(goal_handle);
+        goal_running_.store(false);
+    });
+  };
+
+  tick_action_server_ = rclcpp_action::create_server<TickAction>(
+    this,
+    "tick",
+    // Goal request
+    goal_request,
+    // Goal cancel
+    goal_cancel,
+    // Goal accepted
+    goal_accepted);
+
+  RCLCPP_INFO(logger_, "'tick' action server ready.");
+}
+
+void BTExecutor::execute_tick(const std::shared_ptr<GoalHandleTickAction> goal_handle)
+{
+  auto active_node_tracker = std::make_unique<ActiveNodeTracker>(tree_.rootNode());
+  const auto goal = goal_handle->get_goal();
+  auto result = std::make_shared<TickAction::Result>();
+  auto feedback = std::make_shared<TickAction::Feedback>();
+
+  RCLCPP_INFO(logger_, "Ticking the tree.");
+
+  BT::NodeStatus status = BT::NodeStatus::IDLE;
+  bool cancelled = false;
+  uint32_t ticks = 0;
+
+  while (!cancelled) {
+    if (goal_handle->is_canceling()) {
+      cancelled = true;
+    }
+
+    status = tree_.tickOnce();
+    ++ticks;
+
+    feedback->status = static_cast<uint8_t>(status);
+    feedback->ticks = ticks;
+    feedback->active_node = active_node_tracker->active_node();
+    goal_handle->publish_feedback(feedback);
+
+    if (status != BT::NodeStatus::RUNNING) {
+      break;
+    }
+  }
+
+  result->status = static_cast<uint8_t>(status);
+  result->ticks = ticks;
+
+  if (cancelled) {
+    tree_.haltTree();
+    result->success = false;
+    result->message = "Task cancelled.";
+    RCLCPP_WARN(logger_, "%s", result->message.c_str());
+    if (goal_handle->is_canceling()) {
+      goal_handle->canceled(result);
+    } else {
+      goal_handle->abort(result);
+    }
+    return;
+  }
+
+  switch (status) {
+    case BT::NodeStatus::SUCCESS:
+      result->success = true;
+      result->message = "Task successfully completed.";
+      RCLCPP_INFO(logger_, "%s", result->message.c_str());
+      goal_handle->succeed(result);
+      return;
+
+    default:
+      result->success = false;
+      result->message = "Task failed.";
+      RCLCPP_ERROR(logger_, "%s", result->message.c_str());
+      goal_handle->abort(result);
+      return;
+  }
+}
+
+void BTExecutor::stop_running_goal()
+{
+  if (tick_thread_.joinable()) {
+    tick_thread_.join();
+  }
+
+  goal_running_.store(false);
 }
 
 void BTExecutor::tick_callback(
