@@ -2,10 +2,12 @@
 #define SH_BT_CORE__BT_EXECUTOR_HPP_
 
 #include <atomic>
+#include <memory>
+#include <thread>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/blackboard.h"
+#include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/loggers/abstract_logger.h"
 #include "behaviortree_cpp/loggers/groot2_publisher.h"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -82,7 +84,7 @@ public:
   /**
    * @brief A destructor for sh_behavior_core::BTExecutor class.
    */
-  ~BTExecutor() = default;
+  ~BTExecutor();
 
 private:
   /**
@@ -115,7 +117,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  // CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Callback function for shutdown transition.
@@ -123,7 +125,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  // CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Declares all ROS2 parameters used by the BTExecutor node.
@@ -143,25 +145,31 @@ private:
    */
   void setup_tick_action();
 
+  /**
+   * @brief
+   *
+   * @param goal_handle
+   */
   void execute_tick(const std::shared_ptr<GoalHandleTickAction> goal_handle);
 
+  /**
+   * @brief Request the running tick to stop, then wait for it to finish.
+   */
   void stop_running_goal();
 
-  /**
-   * @brief Callback function for ticking the Behavior Tree.
-   */
-  void tick_callback(const std::shared_ptr<sh_interfaces::srv::TickTree::Request> request,
-  std::shared_ptr<sh_interfaces::srv::TickTree::Response> response);
-
   rclcpp::Logger logger_; // Ros 2 node logger
+  rclcpp::PreShutdownCallbackHandle pre_shutdown_handle_;
+
+  BT::Tree tree_;
+  std::unique_ptr<BT::Groot2Publisher> groot_publisher_;
 
   rclcpp_action::Server<TickAction>::SharedPtr tick_action_server_;
   std::atomic_bool goal_running_{false};
   std::thread tick_thread_;
+  std::shared_ptr<std::atomic_bool> cancel_token_{std::make_shared<std::atomic_bool>(false)};
 
-  std::unique_ptr<BT::Groot2Publisher> groot_publisher_;
-
-  BT::Tree tree_;
+  double tick_period_s_{0.01};
+  double feedback_period_s_{0.2};
 };
 
 }  // namespace sh_bt_core

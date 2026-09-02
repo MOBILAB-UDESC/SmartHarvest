@@ -1,6 +1,7 @@
 #ifndef SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 #define SH_MOVE_GROUP_SERVER__MOVE_GROUP_SERVER_HPP_
 
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <string>
@@ -117,36 +118,6 @@ private:
    */
   CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
-  MoveItConfigOptions get_moveit_config_options();
-
-  /**
-   * @brief Copy the MoveIt configuration parameters exposed by the move_group node
-   * (kinematics solvers, joint limits) onto node_.
-   *
-   * MoveGroupInterface builds its RobotModel from node_, and RobotModelLoader only
-   * instantiates the kinematics solvers of a group when the matching
-   * robot_description_kinematics.<group>.* parameters live on that node. Without them
-   * planning through move_group still works (it is solved server side), but every client
-   * side IK query, such as the setFromIK call of the cartesian pipeline, fails with
-   * "No kinematics solver instantiated for group". The RobotModel is built and cached on
-   * the first MoveGroupInterface construction, so this has to run before
-   * arm_move_group_init().
-   *
-   * @return True when at least one parameter was imported.
-   */
-  bool import_moveit_parameters();
-
-  /**
-   * @brief Block until a node shows up in the ROS graph.
-   *
-   * @param fully_qualified_name Name of the node to wait for, leading slash included.
-   * @param deadline Absolute time at which to give up.
-   * @return True when the node showed up before the deadline.
-   */
-  bool wait_for_node(
-    const std::string& fully_qualified_name,
-    const std::chrono::steady_clock::time_point& deadline);
-
   /**
    * @brief Initialize Moveit Group Interface for the arm
    */
@@ -221,6 +192,53 @@ private:
     const geometry_msgs::msg::Pose& grasp_pose,
     double offset_m);
 
+  /**
+   * @brief Whether the goal has been asked to cancel.
+   *
+   * @tparam MoveAction Action type.
+   * @param goal_handle Handle of accepted goal.
+   * @return true when execution should stop.
+   */
+  template <class MoveAction>
+  bool stop_requested(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>>& goal_handle) const
+  {
+    return goal_handle && goal_handle->is_canceling();
+  }
+
+  /**
+   * @brief Terminate a goal that did not complete, in the state the action expects.
+   *
+   * @tparam MoveAction Action type.
+   * @param goal_handle Handle of accepted goal.
+   * @param result Result object to return to the client.
+   */
+  template <class MoveAction>
+  void terminate_goal(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>>& goal_handle,
+    std::shared_ptr<typename MoveAction::Result>& result)
+  {
+    result->success = false;
+
+    if (goal_handle->is_canceling()) {
+      if (result->message.empty()) {
+        result->message = "Goal cancelled.";
+      }
+      RCLCPP_WARN(get_logger(), "Goal cancelled: %s", result->message.c_str());
+      goal_handle->canceled(result);
+      return;
+    }
+
+    if (goal_handle->is_executing()) {
+      goal_handle->abort(result);
+    }
+  }
+
+  /**
+   * @brief Stop every planning group immediately.
+   */
+  void stop_all_motion();
+
   rclcpp::Node::SharedPtr node_;
   rclcpp::Executor::SharedPtr executor_;
 
@@ -251,6 +269,8 @@ private:
   std::string object_to_attach_detach_, link_to_attach_detach_;
 
   rclcpp::Service<SelectNextTargetSrv>::SharedPtr select_target_service_;
+
+  rclcpp::PreShutdownCallbackHandle pre_shutdown_handle_;
 
   bool use_constraints_;
   bool cartesian_;

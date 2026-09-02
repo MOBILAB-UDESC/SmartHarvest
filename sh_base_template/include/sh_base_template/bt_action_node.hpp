@@ -1,9 +1,12 @@
 #ifndef SH_BASE_TEMPLATE__BT_ACTION_NODE_HPP_
 #define SH_BASE_TEMPLATE__BT_ACTION_NODE_HPP_
 
+#include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 
 #include "behaviortree_cpp/action_node.h"
 #include "rclcpp/rclcpp.hpp"
@@ -37,7 +40,9 @@ public:
    * @brief A destructor for sh_base_template::BTActionNode class.
    */
   virtual ~BTActionNode()
-  {}
+  {
+    cancel_active_goal();
+  }
 
   /**
    * @brief Final tick implementation.
@@ -100,6 +105,8 @@ public:
 protected:
   rclcpp::Logger logger_;
 
+  using CancelToken = std::shared_ptr<std::atomic_bool>;
+
   /**
    * @brief Any subclass of BTActionNode that accepts parameters must provide a
    * providedPorts method and call providedBasicPorts in it.
@@ -123,7 +130,7 @@ private:
    *
    * @param action_name Name of the action.
    */
-  void create_action_client(const std::string& action_server_name);
+  void create_action_client();
 
   /**
    * @brief Check if action server is available/ready.
@@ -142,7 +149,17 @@ private:
    * @brief BehaviorTree halt callback.
    */
   void halt() override
-  {}
+  {
+    cancel_active_goal();
+    resetStatus();
+  }
+
+  /**
+   * @brief Ask the server to cancel the goal currently in flight, if any.
+   *
+   * @return true or false.
+   */
+  bool cancel_active_goal();
 
   /**
    * @brief Send one goal asynchronously and register goal/feedback/result callbacks.
@@ -160,8 +177,15 @@ private:
   typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult result_;
   double action_response_timeout_;
   double wait_for_action_timeout_;
+  double cancel_timeout_;
   bool goal_result_received_;
   std::chrono::steady_clock::time_point timeout_deadline_;
+
+  typename rclcpp_action::ClientGoalHandle<ActionType>::SharedPtr goal_handle_;
+  bool goal_running_{false};
+  std::mutex goal_mutex_;
+  CancelToken cancel_token_;
+  std::string action_server_name_;
 };
 
 //----------------------------------------------------------------
@@ -180,17 +204,19 @@ inline BTActionNode<NodeT, ActionT>::BTActionNode(
   // Blackboard/BT ports variables
   node_ = node_config.blackboard->get<typename NodeT::WeakPtr>("root_node");
   wait_for_action_timeout_ = node_config.blackboard->get<double>("wait_for_action_timeout");
-  std::string action_server_name;
-  getInput("action_name", action_server_name);
+  cancel_token_ = node_config.blackboard->get<CancelToken>("bt_cancel_token");
+  cancel_timeout_ = node_config.blackboard->get<double>("default_cancel_timeout");
+
+  getInput("action_name", action_server_name_);
   getInput("action_response_timeout", action_response_timeout_);
 
-  create_action_client(action_server_name);
+  create_action_client();
 
   RCLCPP_INFO(logger_, "Node created.");
 }
 
 template <class NodeT, class ActionT>
-inline void BTActionNode<NodeT, ActionT>::create_action_client(const std::string& action_server_name)
+inline void BTActionNode<NodeT, ActionT>::create_action_client()
 {
   auto node = node_.lock();
 
@@ -198,14 +224,14 @@ inline void BTActionNode<NodeT, ActionT>::create_action_client(const std::string
   callback_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
   executor_.add_callback_group(callback_group_, node->get_node_base_interface());
 
-  client_ = rclcpp_action::create_client<ActionT>(node, action_server_name, callback_group_);
+  client_ = rclcpp_action::create_client<ActionT>(node, action_server_name_, callback_group_);
 
   if (!server_ready()) {
-    RCLCPP_ERROR(logger_, "Action server '%s' not available.", action_server_name.c_str());
+    RCLCPP_ERROR(logger_, "Action server '%s' not available.", action_server_name_.c_str());
     throw std::runtime_error(
-      std::string("Action server not available: ") + action_server_name);
+      std::string("Action server not available: ") + action_server_name_);
   }
-  RCLCPP_INFO(logger_, "Action server '%s' available.", action_server_name.c_str());
+  RCLCPP_INFO(logger_, "Action server '%s' available.", action_server_name_.c_str());
 
   // Initialize Action members.
   goal_ = std::make_shared<typename ActionT::Goal>();
@@ -223,6 +249,9 @@ void BTActionNode<NodeT, ActionT>::send_a_goal()
       std::chrono::duration<double>(action_response_timeout_));
 
   goal_result_received_ = false;
+  goal_handle_.reset();
+  goal_running_ = true;
+
   auto send_goal_options = typename rclcpp_action::Client<ActionT>::SendGoalOptions();
 
   send_goal_options.goal_response_callback =
@@ -230,9 +259,11 @@ void BTActionNode<NodeT, ActionT>::send_a_goal()
   {
     if (!goal_handle) {
       RCLCPP_ERROR(logger_, "Goal rejected by server.");
-    } else {
-      RCLCPP_INFO(logger_, "Goal accepted by server, waiting for result.");
+      goal_running_ = false;
+      return;
     }
+    RCLCPP_INFO(logger_, "Goal accepted by server, waiting for result.");
+    goal_handle_ = goal_handle;
   };
 
   send_goal_options.feedback_callback = [this](
@@ -247,8 +278,82 @@ void BTActionNode<NodeT, ActionT>::send_a_goal()
   {
     goal_result_received_ = true;
     result_ = result;
+    goal_handle_.reset();
+    goal_running_ = false;
   };
   client_->async_send_goal(*goal_, send_goal_options);
+}
+
+template <class NodeT, class ActionT>
+inline bool BTActionNode<NodeT, ActionT>::cancel_active_goal()
+{
+  auto in_flight = [this]() {
+    return goal_running_ && !goal_result_received_;
+  };
+
+  if (!client_ || !in_flight()) {
+    goal_handle_.reset();
+    return false;
+  }
+
+  RCLCPP_WARN(
+    logger_, "Cancelling goal on '%s'.", action_server_name_.c_str());
+
+  const auto cancel_deadline =
+    std::chrono::steady_clock::now() +
+    std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+      std::chrono::duration<double>(cancel_timeout_));
+
+  typename rclcpp_action::ClientGoalHandle<ActionT>::SharedPtr handle;
+  {
+    while (std::chrono::steady_clock::now() < cancel_deadline) {
+      handle = goal_handle_;
+      if (handle || goal_result_received_ || !goal_running_) {
+        break;
+      }
+      executor_.spin_some();
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+
+  bool acknowledged = false;
+  auto cancel_future = handle
+    ? client_->async_cancel_goal(handle)
+    : client_->async_cancel_all_goals();
+
+  if (executor_.spin_until_future_complete(
+        cancel_future, cancel_deadline - std::chrono::steady_clock::now())
+      == rclcpp::FutureReturnCode::SUCCESS)
+  {
+    acknowledged = true;
+    RCLCPP_INFO(logger_, "Cancel acknowledged by '%s'.", action_server_name_.c_str());
+  } else {
+    RCLCPP_ERROR(
+      logger_, "No cancel response from '%s' in %.3f seconds.",
+      action_server_name_.c_str(), cancel_timeout_);
+  }
+
+  if (acknowledged) {
+    while (std::chrono::steady_clock::now() < cancel_deadline) {
+      executor_.spin_some();
+      if (goal_result_received_) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    if (goal_result_received_) {
+      RCLCPP_INFO(logger_, "Cancel goal on '%s' terminated.", action_server_name_.c_str());
+    } else {
+      RCLCPP_WARN(
+        logger_, "'%s' accepted the cancel but did not terminate the goal in %.3f s.",
+        action_server_name_.c_str(), cancel_timeout_);
+    }
+  }
+
+  goal_handle_.reset();
+  goal_running_ = false;
+  return acknowledged;
 }
 
 template <class NodeT, class ActionT>
@@ -265,6 +370,7 @@ inline BT::NodeStatus BTActionNode<NodeT, ActionT>::tick()
   executor_.spin_some();
 
   if (action_response_timeout_ > 0.0 && std::chrono::steady_clock::now() > timeout_deadline_) {
+    cancel_active_goal();
     on_timeout();
     RCLCPP_ERROR(logger_, "No response received in %.3f seconds.", action_response_timeout_);
     setStatus(BT::NodeStatus::FAILURE);

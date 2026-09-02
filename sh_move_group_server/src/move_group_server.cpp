@@ -1,5 +1,8 @@
 #include "sh_move_group_server/move_group_server.hpp"
 
+#include <chrono>
+#include <thread>
+
 #include <algorithm>
 #include <functional>
 #include <thread>
@@ -32,10 +35,18 @@ MoveGroupServer::MoveGroupServer(const std::string & node_name) :
   std::thread([this]() { executor_->spin(); }).detach();
 
   declare_parameter<std::string>("base_link", "base_link");
+  pre_shutdown_handle_ = get_node_options().context()->add_pre_shutdown_callback(
+    [this]() {
+      RCLCPP_WARN(get_logger(), "Shutting down; stopping motion.");
+      stop_all_motion();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    });
 }
 
 MoveGroupServer::~MoveGroupServer()
-{}
+{
+  get_node_options().context()->remove_pre_shutdown_callback(pre_shutdown_handle_);
+}
 
 CallbackReturn MoveGroupServer::on_configure(const rclcpp_lifecycle::State & state)
 {
@@ -101,7 +112,9 @@ CallbackReturn MoveGroupServer::on_deactivate(const rclcpp_lifecycle::State & st
   (void) state;
   RCLCPP_INFO(get_logger(), "Deactivating.");
 
-  constraints_->activate();
+  constraints_->deactivate();
+
+  stop_all_motion();
 
   move_to_named_target_server_.reset();
   move_to_object_server_.reset();
@@ -327,12 +340,14 @@ void MoveGroupServer::setup_move_to_named_target_action()
 
       auto plan_and_execute_result = plan_and_execute<MoveToNamedTargetAction>(goal_handle, result);
 
-      // TODO: Add cancel condition
       if (!plan_and_execute_result) {
-        result->success = false;
-        if (goal_handle->is_executing()) {
-          goal_handle->abort(result);
-        }
+        terminate_goal<MoveToNamedTargetAction>(goal_handle, result);
+        return;
+      }
+
+      if (goal_handle->is_canceling()) {
+        result->message = "Goal cancelled after completion.";
+        terminate_goal<MoveToNamedTargetAction>(goal_handle, result);
         return;
       }
 
@@ -389,7 +404,6 @@ void MoveGroupServer::setup_move_to_object_action()
   auto goal_cancel = [this](
     const std::shared_ptr<GoalHandleMoveToObjectAction> /*goal_handle*/)
   {
-    RCLCPP_INFO(get_logger(), "Received request to cancel goal.");
     selected_move_group_->stop();
     return rclcpp_action::CancelResponse::ACCEPT;
   };
@@ -430,14 +444,15 @@ void MoveGroupServer::setup_move_to_object_action()
           pre_grasp_pose,
           goal_pose);
         if (!cart_result) {
-          result->success = false;
-          if (goal_handle->is_executing()) {
-            goal_handle->abort(result);
-          }
+          terminate_goal<MoveToObjectAction>(goal_handle, result);
           return;
         }
-        // result->success = true;
-        // return;
+      }
+
+      if (goal_handle->is_canceling()) {
+        result->message = "Goal cancelled after completion.";
+        terminate_goal<MoveToObjectAction>(goal_handle, result);
+        return;
       }
 
       result->success = true;
@@ -494,7 +509,7 @@ void MoveGroupServer::get_pose_from_named_target(
   const std::string& named_target,
   geometry_msgs::msg::Pose& goal_pose)
 {
-  auto named_joint_values = selected_move_group_->getNamedTargetValues(goal_named_target_);
+  auto named_joint_values = selected_move_group_->getNamedTargetValues(named_target);
 
   moveit::core::RobotState goal_state(selected_move_group_->getRobotModel());
   goal_state.setVariablePositions(named_joint_values);
@@ -526,6 +541,11 @@ bool MoveGroupServer::plan_and_execute(
 {
   auto feedback = std::make_shared<typename MoveAction::Feedback>();
 
+  if (stop_requested<MoveAction>(goal_handle)) {
+    result->message = "Cancelled before planning.";
+    return false;
+  }
+
   moveit::planning_interface::MoveGroupInterface::Plan group_plan;
   feedback->message = "Planning started.";
   goal_handle->publish_feedback(feedback);
@@ -539,6 +559,11 @@ bool MoveGroupServer::plan_and_execute(
     return false;
   }
 
+  if (stop_requested<MoveAction>(goal_handle)) {
+    result->message = "Cancelled after planning, before execution.";
+    return false;
+  }
+
   moveit_visual_tools_->publishTrajectoryLine(
     plan.trajectory,
     selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
@@ -549,6 +574,11 @@ bool MoveGroupServer::plan_and_execute(
   auto execution_result = selected_move_group_->execute(plan);
 
   if (!execution_result) {
+    if (stop_requested<MoveAction>(goal_handle)) {
+      RCLCPP_WARN(get_logger(), "Execution interrupted by cancel request.");
+      result->message = "Execution cancelled.";
+      return false;
+    }
     RCLCPP_ERROR(get_logger(), "Path execution failed!. Skipped.");
     result->message = "Path execution failed.";
     return false;
@@ -568,10 +598,6 @@ bool MoveGroupServer::plan_and_execute_cartesian(
 {
   const int ik_attemps = 40;
   const double ik_timeout = 0.01;
-  const double uniq_res = 1e-3;
-  const double eef_step = 0.01;
-  const double jump_threshold = 0.0;
-  const double min_fraction = 0.95;
 
   auto model = selected_move_group_->getRobotModel();
 
@@ -649,17 +675,37 @@ bool MoveGroupServer::plan_and_execute_cartesian(
     selected_move_group_->getRobotModel()->getJointModelGroup("arm"));
   moveit_visual_tools_->trigger();
 
+  if (stop_requested<MoveAction>(goal_handle)) {
+    result->message = "Cancelled before execution.";
+    return false;
+  }
+
   auto execution_result = selected_move_group_->execute(plan);
 
   if (!execution_result) {
+    if (stop_requested<MoveAction>(goal_handle)) {
+      RCLCPP_WARN(get_logger(), "Approach interrupted by cancel request.");
+      result->message = "Execution cancelled during approach.";
+      return false;
+    }
     RCLCPP_ERROR(get_logger(), "Path execution failed!. Skipped.");
     result->message = "Path execution failed.";
+    return false;
+  }
+
+  if (stop_requested<MoveAction>(goal_handle)) {
+    result->message = "Cancelled at pre-grasp.";
     return false;
   }
 
   execution_result = selected_move_group_->execute(trajectory);
 
   if (!execution_result) {
+    if (stop_requested<MoveAction>(goal_handle)) {
+      RCLCPP_WARN(get_logger(), "Cartesian approach interrupted by cancel request.");
+      result->message = "Execution cancelled during Cartesian approach.";
+      return false;
+    }
     RCLCPP_ERROR(get_logger(), "Cartesian path execution failed!. Skipped.");
     result->message = "Cartesian path execution failed.";
     return false;
@@ -670,6 +716,16 @@ bool MoveGroupServer::plan_and_execute_cartesian(
   return true;
 }
 
+
+void MoveGroupServer::stop_all_motion()
+{
+  if (arm_move_group_) {
+    arm_move_group_->stop();
+  }
+  if (gripper_move_group_) {
+    gripper_move_group_->stop();
+  }
+}
 
 geometry_msgs::msg::Pose MoveGroupServer::compute_pre_grasp(
   const geometry_msgs::msg::Pose& grasp_pose,

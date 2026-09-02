@@ -29,7 +29,6 @@ set(srv_files
   "srv/RunPerception.srv"
   "srv/RunYoloDetection.srv"
   "srv/SelectNextTarget.srv"
-  "srv/TickTree.srv"
   "srv/UpdatePlanningSceneFromPoses.srv"
 )
 
