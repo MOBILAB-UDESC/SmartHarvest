@@ -33,8 +33,8 @@ public:
    * @param node_config Configuration of the BehaviorTree Node.
    */
   explicit BTActionNode(
-    const std::string& action_name,
-    const BT::NodeConfig& node_config);
+    const std::string & action_name,
+    const BT::NodeConfig & node_config);
 
   /**
    * @brief A destructor for sh_base_template::BTActionNode class.
@@ -50,7 +50,6 @@ public:
    * Main execution function required by BehaviorTree. Waits for an action response to arrive
    * or the timeout expires.
    * On SUCCESS, calls onTick() function.
-   *
    * @return BT::NodeStatus SUCCESS or FAILURE.
    */
   BT::NodeStatus tick() override final;
@@ -60,42 +59,46 @@ public:
    *
    * @param goal_msg Mutable goal object to be filled by derived class.
    */
-  virtual bool update_goal(std::shared_ptr<typename ActionType::Goal>& goal_msg) = 0;
+  virtual bool update_goal(std::shared_ptr<typename ActionType::Goal> & goal_msg) = 0;
 
-  /** Callback invoked by tick() when action feedback is received.
+  /**
+   * @brief Callback invoked by tick() when action feedback is received.
    *
    * Implement a custom application logic here.
    * @param feedback Latest feedback message from the action server.
    */
   virtual void on_feedback(const std::shared_ptr<const typename ActionType::Feedback> feedback) = 0;
 
-  /** Callback invoked by tick() when the action finishes with failure/canceled.
+  /**
+   * @brief Callback invoked by tick() when the action finishes with failure/canceled.
    *
    * Implement a custom application logic here.
    * @param result Wrapped action result.
    */
   virtual void on_failure(
-    const typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult& result) = 0;
+    const typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult & result) = 0;
 
-  /** Callback invoked by tick() when the action exceeds configured response timeout.
+  /**
+   * @brief Callback invoked by tick() when the action exceeds configured response timeout.
    *
    * Implement a custom application logic here.
    */
   virtual void on_timeout() {}
 
-  /** Callback invoked by tick() when the action finishes with success.
+  /**
+   * @brief Callback invoked by tick() when the action finishes with success.
    *
    * Implement a custom application logic here.
    * @param result Wrapper for the action response.
-   *
    * @return BT::NodeStatus SUCCESS or FAILURE.
    */
   virtual BT::NodeStatus on_success(
-    const typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult& result) = 0;
+    const typename rclcpp_action::ClientGoalHandle<ActionType>::WrappedResult & result) = 0;
 
   /**
-   * @brief Creates list of BT ports
-   * @return PortsList Containing basic ports along with node-specific ports
+   * @brief Creates list of BT ports.
+   *
+   * @return PortsList Containing basic ports along with node-specific ports.
    */
   static BT::PortsList providedPorts()
   {
@@ -105,11 +108,10 @@ public:
 protected:
   rclcpp::Logger logger_;
 
-  using CancelToken = std::shared_ptr<std::atomic_bool>;
-
   /**
    * @brief Any subclass of BTActionNode that accepts parameters must provide a
    * providedPorts method and call providedBasicPorts in it.
+   *
    * @param addition Additional ports to add to BT port list
    * @return BT::PortsList Containing basic ports along with node-specific ports
    */
@@ -126,7 +128,7 @@ protected:
 
 private:
   /**
-   * @brief Initialize the action client.
+   * @brief Initialise the action client.
    *
    * @param action_name Name of the action.
    */
@@ -183,8 +185,6 @@ private:
 
   typename rclcpp_action::ClientGoalHandle<ActionType>::SharedPtr goal_handle_;
   bool goal_running_{false};
-  std::mutex goal_mutex_;
-  CancelToken cancel_token_;
   std::string action_server_name_;
 };
 
@@ -204,7 +204,6 @@ inline BTActionNode<NodeT, ActionT>::BTActionNode(
   // Blackboard/BT ports variables
   node_ = node_config.blackboard->get<typename NodeT::WeakPtr>("root_node");
   wait_for_action_timeout_ = node_config.blackboard->get<double>("wait_for_action_timeout");
-  cancel_token_ = node_config.blackboard->get<CancelToken>("bt_cancel_token");
   cancel_timeout_ = node_config.blackboard->get<double>("default_cancel_timeout");
 
   getInput("action_name", action_server_name_);
@@ -233,7 +232,7 @@ inline void BTActionNode<NodeT, ActionT>::create_action_client()
   }
   RCLCPP_INFO(logger_, "Action server '%s' available.", action_server_name_.c_str());
 
-  // Initialize Action members.
+  // Initialise Action members.
   goal_ = std::make_shared<typename ActionT::Goal>();
   result_ = typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult();
 
@@ -255,7 +254,7 @@ void BTActionNode<NodeT, ActionT>::send_a_goal()
   auto send_goal_options = typename rclcpp_action::Client<ActionT>::SendGoalOptions();
 
   send_goal_options.goal_response_callback =
-    [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::SharedPtr& goal_handle)
+    [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::SharedPtr & goal_handle)
   {
     if (!goal_handle) {
       RCLCPP_ERROR(logger_, "Goal rejected by server.");
@@ -274,7 +273,7 @@ void BTActionNode<NodeT, ActionT>::send_a_goal()
   };
 
   send_goal_options.result_callback =
-    [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult& result)
+    [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult & result)
   {
     goal_result_received_ = true;
     result_ = result;

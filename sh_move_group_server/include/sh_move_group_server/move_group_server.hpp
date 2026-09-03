@@ -70,7 +70,7 @@ public:
    *
    * @param node_name Name of the node.
    */
-  explicit MoveGroupServer(const std::string& node_name);
+  explicit MoveGroupServer(const std::string & node_name);
 
   /**
    * @brief A destructor for sh_move_group_server::MoveGroupServer class.
@@ -84,7 +84,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback function for activate transition.
@@ -92,7 +92,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback function for deactivate transition.
@@ -100,7 +100,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback function for cleanup transition.
@@ -108,7 +108,7 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback function for shutdown transition.
@@ -116,15 +116,15 @@ private:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
 
   /**
-   * @brief Initialize Moveit Group Interface for the arm
+   * @brief Initialise Moveit Group Interface for the arm
    */
   void arm_move_group_init();
 
   /**
-   * @brief Initialize Moveit Group Interface for the gripper
+   * @brief Initialise Moveit Group Interface for the gripper
    */
   void gripper_move_group_init();
 
@@ -149,7 +149,7 @@ private:
    * @param move_group Named planning group.
    * @return True when the named target exists.
    */
-  bool named_target_exists(const std::string& named_target, const std::string& move_group);
+  bool named_target_exists(const std::string & named_target, const std::string & move_group);
 
   /**
    * @brief Check whether an object exists in the planning scene.
@@ -157,16 +157,18 @@ private:
    * @param object_name Named of the collision object to validate.
    * @return True when the collision object exists.
    */
-  bool object_exists(const std::string& object_name);
+  bool object_exists(const std::string & object_name);
 
-  void get_pose_from_named_target(const std::string& named_target, geometry_msgs::msg::Pose& goal_pose);
+  void get_pose_from_named_target(
+    const std::string & named_target,
+    geometry_msgs::msg::Pose & goal_pose);
 
   /**
    * @brief Select the move group interface.
    *
    * @param move_group Named planning group.
    */
-  bool select_move_group(const std::string& move_group);
+  bool select_move_group(const std::string & move_group);
 
   /**
    * @brief Abstract method for planning and execution routine for all action types.
@@ -179,17 +181,17 @@ private:
   template <class MoveAction>
   bool plan_and_execute(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
-    std::shared_ptr<typename MoveAction::Result>& result);
+    std::shared_ptr<typename MoveAction::Result> & result);
 
   template <class MoveAction>
   bool plan_and_execute_cartesian(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
-    std::shared_ptr<typename MoveAction::Result>& result,
-    geometry_msgs::msg::Pose& pre_goal_pose,
-    geometry_msgs::msg::Pose& goal_pose);
+    std::shared_ptr<typename MoveAction::Result> & result,
+    geometry_msgs::msg::Pose & pre_goal_pose,
+    geometry_msgs::msg::Pose & goal_pose);
 
   geometry_msgs::msg::Pose compute_pre_grasp(
-    const geometry_msgs::msg::Pose& grasp_pose,
+    const geometry_msgs::msg::Pose & grasp_pose,
     double offset_m);
 
   /**
@@ -201,7 +203,7 @@ private:
    */
   template <class MoveAction>
   bool stop_requested(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>>& goal_handle) const
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> & goal_handle) const
   {
     return goal_handle && goal_handle->is_canceling();
   }
@@ -215,8 +217,8 @@ private:
    */
   template <class MoveAction>
   void terminate_goal(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>>& goal_handle,
-    std::shared_ptr<typename MoveAction::Result>& result)
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> & goal_handle,
+    std::shared_ptr<typename MoveAction::Result> & result)
   {
     result->success = false;
 

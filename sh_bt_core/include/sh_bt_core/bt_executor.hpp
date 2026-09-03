@@ -3,9 +3,9 @@
 
 #include <atomic>
 #include <memory>
+#include <string>
 #include <thread>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
 #include "behaviortree_cpp/blackboard.h"
 #include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/loggers/abstract_logger.h"
@@ -18,10 +18,6 @@
 
 namespace sh_bt_core
 {
-
-using CallbackReturn = rclcpp_lifecycle::LifecycleNode::CallbackReturn;
-using TickAction = sh_interfaces::action::Tick;
-using GoalHandleTickAction = rclcpp_action::ServerGoalHandle<TickAction>;
 
 /**
  * @class sh_bt_core::ActiveNodeTracker
@@ -55,8 +51,6 @@ public:
 
   /**
    * @brief Name of the last node seen in the RUNNING state.
-   *
-   * @return Node name.
    */
   std::string active_node();
 
@@ -66,15 +60,19 @@ private:
 };
 
 /**
- * @class sh_behavior_core::BTExecutor
- * @brief Lifecycle-manager that loads nodes and tree configuration and plugins
+ * @class sh_bt_core::BTExecutor
+ * @brief Lifecycle-manager that loads BT nodes, tree configuration, and plugins
  * for smart harvesting operations.
  */
 class BTExecutor : public rclcpp_lifecycle::LifecycleNode
 {
 public:
+  using CallbackReturn = rclcpp_lifecycle::LifecycleNode::CallbackReturn;
+  using TickAction = sh_interfaces::action::Tick;
+  using GoalHandleTickAction = rclcpp_action::ServerGoalHandle<TickAction>;
+
   /**
-   * @brief A constructor for sh_behavior_core::BTExecutor class.
+   * @brief A constructor for sh_bt_core::BTExecutor class.
    *
    * @param node_name Name of the node.
    */
@@ -82,7 +80,7 @@ public:
 
 
   /**
-   * @brief A destructor for sh_behavior_core::BTExecutor class.
+   * @brief A destructor for sh_bt_core::BTExecutor class.
    */
   ~BTExecutor();
 
@@ -134,7 +132,7 @@ private:
 
   /**
    * @brief Creates and populates the BehaviorTree blackboard with all entries
-   *        required by the BT nodes at runtime.
+   * required by the BT nodes at runtime.
    *
    * @return BT::Blackboard::Ptr Fully populated blackboard.
    */
@@ -146,11 +144,11 @@ private:
   void setup_tick_action();
 
   /**
-   * @brief
+   * @brief Runs the BT ticking loop.
    *
-   * @param goal_handle
+   * @param goal_handle Handle of accepted goal.
    */
-  void execute_tick(const std::shared_ptr<GoalHandleTickAction> goal_handle);
+  void execute_tick(const std::shared_ptr<GoalHandleTickAction> & goal_handle);
 
   /**
    * @brief Request the running tick to stop, then wait for it to finish.

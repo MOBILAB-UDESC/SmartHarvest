@@ -1,29 +1,26 @@
 sh_bt_core:
   ros__parameters:
     tree_xml_path: ""
+    tick_period: 0.01
+    feedback_period: 0.2
     enable_groot: true
 
     default_sub_timeout: 1.0
     default_sync_timeout: 0.5
+
     wait_for_service_timeout: 5.0
     default_service_response_timeout: 5.0
+
     wait_for_action_timeout: 5.0
     default_action_response_timeout: 0.0
-
-    auto_mode: false
+    default_cancel_timeout: 2.0
 
     # DEFAULT BT NODES CONFIG
     camera_default_topics:
       - "camera_0/rgb/image"
       - "camera_0/depth/image"
       - "camera_0/rgb/camera_info"
-    detection_service_name: "run_perception"
     transformation_timeout: 1.0
-    clear_scene_service_name: "clear_scene"
-    update_scene_service_name: "update_from_pose_scene"
-    move_to_named_target_action_name: "move_to_named_target"
-    move_to_pose_action_name: "move_to_pose"
-    move_to_object_action_name: "move_to_object"
     base_link: "base_link"
     # bt_plugin_ids: [something_action_node]
 
@@ -34,7 +31,6 @@ yolo_server:
 
 sh_perception_server:
   ros__parameters:
-    service_name: "run_perception"
     pipeline:
       plugin: "sh_rgbd_perception_pipeline::RgbdPerceptionPipeline"
       detector:
@@ -56,8 +52,6 @@ sh_perception_server:
 
 sh_planning_scene_handler:
   ros__parameters:
-    clear_scene_service_name: clear_scene
-    update_scene_service_name: update_from_pose_scene
     ground_plane_link: base_link
     ground_plane_dimension: [1.0, 1.0, 0.001]
     ground_plane_position: [0.0, 0.0, -0.066]
@@ -66,10 +60,6 @@ sh_planning_scene_handler:
 
 sh_move_group_server:
   ros__parameters:
-    action_names:
-      move_to_named_target: move_to_named_target
-      move_to_pose: move_to_pose
-      move_to_object: move_to_object
     base_link: "base_link"
     use_constraints: true
     constraints:

@@ -43,7 +43,7 @@ protected:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
 
   /**
    * @brief Callback function for activate transition.
@@ -52,7 +52,7 @@ protected:
    * @param state A reference to the state of the Lifecycle Node.
    * @return SUCCESS or FAILURE.
    */
-  CallbackReturn on_activate(const rclcpp_lifecycle::State& /*state*/) override;
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & /*state*/) override;
 
   /**
    * @brief Callback function for deactivate transition.
@@ -60,7 +60,7 @@ protected:
   * @param state A reference to the state of the Lifecycle Node.
   * @return SUCCESS or FAILURE.
   */
-  CallbackReturn on_deactivate(const rclcpp_lifecycle::State& /*state*/) override;
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & /*state*/) override;
 
   /**
    * @brief Callback function for cleanup transition.
@@ -68,7 +68,7 @@ protected:
   * @param state A reference to the state of the Lifecycle Node.
   * @return SUCCESS or FAILURE.
   */
-  CallbackReturn on_cleanup(const rclcpp_lifecycle::State& /*state*/) override;
+  CallbackReturn on_cleanup(const rclcpp_lifecycle::State & /*state*/) override;
 
   /**
    * @brief Callback function for shutdown transition.
@@ -76,7 +76,7 @@ protected:
   * @param state A reference to the state of the Lifecycle Node.
   * @return SUCCESS or FAILURE.
   */
-  CallbackReturn on_shutdown(const rclcpp_lifecycle::State& /*state*/) override;
+  CallbackReturn on_shutdown(const rclcpp_lifecycle::State & /*state*/) override;
 
 private:
   /**

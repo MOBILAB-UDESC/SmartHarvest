@@ -49,7 +49,8 @@ private:
    * @brief Block until move_group shows up in the ROS graph.
    *
    * @param node_name Fully name of the source (/move_group) node.
-   * @param deadline Absolute time for the method to wait
+   * @param deadline Absolute time for the method to wait.
+   *
    * @return true or false.
    */
   bool wait_for_source_node(
@@ -59,8 +60,9 @@ private:
   /**
    * @brief Copy every parameter matching the configured prefixes from the source node.
    *
-   * @param deadline Absolute time for the method to wait
-   * @return true or false.s
+   * @param deadline Absolute time for the method to wait.
+   *
+   * @return true or false.
    */
   bool import_parameters(const std::chrono::steady_clock::time_point & deadline);
 
@@ -71,6 +73,7 @@ private:
    *
    * @param name Parameter name.
    * @param prefixes Accepted prefixes.
+   *
    * @return true or false.
    */
   static bool matches_prefix(const std::string & name, const std::vector<std::string> & prefixes);

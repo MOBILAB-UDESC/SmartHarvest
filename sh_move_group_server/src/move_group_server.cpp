@@ -260,7 +260,7 @@ void MoveGroupServer::setup_move_to_named_target_action()
 {
   // REQUEST
   auto goal_request = [this](
-    const rclcpp_action::GoalUUID& /*uuid*/,
+    const rclcpp_action::GoalUUID & /*uuid*/,
     std::shared_ptr<const MoveToNamedTargetAction::Goal> goal)
   {
     goal_named_target_ = goal->named_target;
@@ -473,7 +473,7 @@ void MoveGroupServer::setup_move_to_object_action()
     goal_accepted);
 }
 
-bool MoveGroupServer::object_exists(const std::string& object_name)
+bool MoveGroupServer::object_exists(const std::string & object_name)
 {
   std::vector<std::string> object_names = planning_scene_interface_.getKnownObjectNames();
   auto result = std::find(object_names.begin(), object_names.end(), object_name);
@@ -484,8 +484,8 @@ bool MoveGroupServer::object_exists(const std::string& object_name)
 }
 
 bool MoveGroupServer::named_target_exists(
-  const std::string& named_target,
-  const std::string& move_group)
+  const std::string & named_target,
+  const std::string & move_group)
 {
   std::vector<std::string> named_target_list;
   {
@@ -506,8 +506,8 @@ bool MoveGroupServer::named_target_exists(
 }
 
 void MoveGroupServer::get_pose_from_named_target(
-  const std::string& named_target,
-  geometry_msgs::msg::Pose& goal_pose)
+  const std::string & named_target,
+  geometry_msgs::msg::Pose & goal_pose)
 {
   auto named_joint_values = selected_move_group_->getNamedTargetValues(named_target);
 
@@ -515,13 +515,13 @@ void MoveGroupServer::get_pose_from_named_target(
   goal_state.setVariablePositions(named_joint_values);
   goal_state.update();  // propagates FK
 
-  const Eigen::Isometry3d& eef_pose =
+  const Eigen::Isometry3d & eef_pose =
     goal_state.getGlobalLinkTransform(selected_move_group_->getEndEffectorLink());
 
   goal_pose = tf2::toMsg(eef_pose);
 }
 
-bool MoveGroupServer::select_move_group(const std::string& move_group)
+bool MoveGroupServer::select_move_group(const std::string & move_group)
 {
   if (move_group == move_group_types_.arm.move_group) {
     selected_move_group_ = arm_move_group_;
@@ -537,7 +537,7 @@ bool MoveGroupServer::select_move_group(const std::string& move_group)
 template <class MoveAction>
 bool MoveGroupServer::plan_and_execute(
   std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
-  std::shared_ptr<typename MoveAction::Result>& result)
+  std::shared_ptr<typename MoveAction::Result> & result)
 {
   auto feedback = std::make_shared<typename MoveAction::Feedback>();
 
@@ -592,7 +592,7 @@ bool MoveGroupServer::plan_and_execute(
 template <class MoveAction>
 bool MoveGroupServer::plan_and_execute_cartesian(
   std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveAction>> goal_handle,
-  std::shared_ptr<typename MoveAction::Result>& result,
+  std::shared_ptr<typename MoveAction::Result> & result,
   geometry_msgs::msg::Pose& pre_goal_pose,
   geometry_msgs::msg::Pose& goal_pose)
 {
@@ -728,7 +728,7 @@ void MoveGroupServer::stop_all_motion()
 }
 
 geometry_msgs::msg::Pose MoveGroupServer::compute_pre_grasp(
-  const geometry_msgs::msg::Pose& grasp_pose,
+  const geometry_msgs::msg::Pose & grasp_pose,
   double offset_m)
 {
   RCLCPP_INFO(

@@ -7,13 +7,12 @@
 namespace sh_perception_server
 {
 
-PerceptionServer::PerceptionServer(const std::string& node_name) :
+PerceptionServer::PerceptionServer(const std::string & node_name) :
   rclcpp_lifecycle::LifecycleNode(node_name),
   pipeline_loader_("sh_base_template", "sh_base_template::PerceptionPipelineBase")
 {
   RCLCPP_INFO(get_logger(), "Initializing");
 
-  declare_parameter<std::string>("service_name", "run_perception");
   declare_parameter<std::string>("pipeline.plugin", "sh_rgbd_perception_pipeline::RgbdPerceptionPipeline");
 }
 
@@ -24,7 +23,7 @@ PerceptionServer::~PerceptionServer()
   service_.reset();
 }
 
-CallbackReturn PerceptionServer::on_configure(const rclcpp_lifecycle::State& state)
+CallbackReturn PerceptionServer::on_configure(const rclcpp_lifecycle::State & state)
 {
   (void) state;
   RCLCPP_INFO(get_logger() , "Configuring.");
@@ -48,17 +47,14 @@ CallbackReturn PerceptionServer::on_configure(const rclcpp_lifecycle::State& sta
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn PerceptionServer::on_activate(const rclcpp_lifecycle::State& /*state*/)
+CallbackReturn PerceptionServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger() , "Activating.");
 
   pipeline_->activate();
 
-  std::string service_name;
-  get_parameter<std::string>("service_name", service_name);
-
   service_ = this->create_service<sh_interfaces::srv::RunPerception>(
-    service_name,
+    "run_perception",
     std::bind(
       &PerceptionServer::trigger_perception_callback,
       this,
@@ -69,7 +65,7 @@ CallbackReturn PerceptionServer::on_activate(const rclcpp_lifecycle::State& /*st
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn PerceptionServer::on_deactivate(const rclcpp_lifecycle::State& /*state*/)
+CallbackReturn PerceptionServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger() , "Deactivating.");
   pipeline_->deactivate();
@@ -78,7 +74,7 @@ CallbackReturn PerceptionServer::on_deactivate(const rclcpp_lifecycle::State& /*
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn PerceptionServer::on_cleanup(const rclcpp_lifecycle::State& /*state*/)
+CallbackReturn PerceptionServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger() , "Cleaning up.");
   pipeline_->cleanup();
@@ -87,7 +83,7 @@ CallbackReturn PerceptionServer::on_cleanup(const rclcpp_lifecycle::State& /*sta
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn PerceptionServer::on_shutdown(const rclcpp_lifecycle::State& /*state*/)
+CallbackReturn PerceptionServer::on_shutdown(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger() , "Shutting down.");
   return CallbackReturn::SUCCESS;
